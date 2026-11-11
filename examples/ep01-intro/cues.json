@@ -1,0 +1,18 @@
+[
+  {"sfx": "whoosh-short.mp3", "shot": "liar", "offset": -0.1, "volume": 0.25},
+  {"sfx": "pop.mp3", "word": 4, "volume": 0.55},
+  {"sfx": "whoosh-short.mp3", "shot": "shrink", "offset": -0.1, "volume": 0.22},
+  {"sfx": "impact-bass-1.mp3", "word": 9, "volume": 0.85},
+  {"sfx": "pop.mp3", "word": 10, "volume": 0.5},
+  {"sfx": "error.mp3", "word": 10, "offset": 0.02, "volume": 0.28},
+  {"sfx": "whoosh.mp3", "shot": "lineup", "offset": -0.08, "volume": 0.38},
+  {"sfx": "whoosh-short.mp3", "shot": "pair", "offset": -0.1, "volume": 0.22},
+  {"sfx": "ping.mp3", "word": 19, "volume": 0.4},
+  {"sfx": "error.mp3", "word": 23, "volume": 0.3},
+  {"sfx": "impact-bass-2.mp3", "shot": "baby", "volume": 0.8},
+  {"sfx": "whoosh-short.mp3", "shot": "babyface", "offset": -0.1, "volume": 0.22},
+  {"sfx": "sparkle.mp3", "word": 32, "volume": 0.32},
+  {"sfx": "whoosh-cinematic.mp3", "shot": "carlot", "offset": -0.08, "volume": 0.32},
+  {"sfx": "pop.mp3", "shot": "shoebox", "offset": 0.2, "volume": 0.55},
+  {"sfx": "ping.mp3", "word": 39, "volume": 0.38}
+]

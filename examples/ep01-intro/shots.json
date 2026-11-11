@@ -1,0 +1,42 @@
+[
+ {
+  "name": "wide",
+  "start": 0.0
+ },
+ {
+  "name": "liar",
+  "start": 0.82
+ },
+ {
+  "name": "shrink",
+  "start": 1.85
+ },
+ {
+  "name": "lineup",
+  "start": 3.08
+ },
+ {
+  "name": "pair",
+  "start": 4.08
+ },
+ {
+  "name": "baby",
+  "start": 6.0
+ },
+ {
+  "name": "babyface",
+  "start": 7.54
+ },
+ {
+  "name": "carlot",
+  "start": 8.76
+ },
+ {
+  "name": "shoebox",
+  "start": 9.46
+ },
+ {
+  "name": "end",
+  "start": 11.14
+ }
+]

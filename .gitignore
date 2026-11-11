@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+examples/*/frames/
+examples/*/stills/
+examples/*/vo/v16.wav
+examples/*/vo/words.json
+examples/*/vo/voice_raw.wav
+*.mp4
+examples/*/captions.ass
