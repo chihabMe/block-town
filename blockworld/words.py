@@ -94,6 +94,22 @@ def align(script, heard):
     return fixed
 
 
+def unswallow(script, times):
+    """Whisper often stretches the word before a pause and squeezes the next word into a few hundredths of a
+    second ("after" 1.81-2.60, "eight." 2.60-2.62). Give the long word a normal length and start the squeezed
+    word right after it."""
+    out = list(times)
+    for i in range(1, len(out)):
+        (a0, a1, aok), (b0, b1, bok) = out[i - 1], out[i]
+        if b1 - b0 < 0.06 and a1 - a0 > 0.5:
+            est = 0.12 + 0.06 * len(norm(script[i - 1]))
+            nb0 = round(min(a0 + est, b0), 3)
+            out[i - 1] = (a0, nb0, aok)
+            out[i] = (nb0, round(max(b1, nb0 + 0.12 + 0.06 * len(norm(script[i]))), 3), bok)
+            print(f"  re-timed: word {i} {script[i]!r} {b0:.2f} -> {nb0:.2f} s (whisper squeezed it after a pause)")
+    return out
+
+
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         sys.exit(__doc__)
@@ -101,7 +117,7 @@ if __name__ == "__main__":
     script = (ep / "script.txt").read_text().split()
     vo = ep / "vo"
     heard = from_whisper_cpp_json(sys.argv[3]) if len(sys.argv) > 3 and sys.argv[2] == "--json" else transcribe(vo / "voice.wav", vo)
-    times = align(script, heard)
+    times = unswallow(script, align(script, heard))
     (vo / "times.json").write_text(json.dumps([{"w": w, "t0": t0, "t1": t1} for w, (t0, t1, _) in zip(script, times)], indent=0))
     loose = [(i, w, t[0]) for i, (w, t) in enumerate(zip(script, times)) if not t[2]]
     print(f"{len(script)} script words, {len(heard)} heard, {len(script) - len(loose)} matched exactly, {len(loose)} placed by guess")

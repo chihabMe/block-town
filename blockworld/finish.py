@@ -10,6 +10,10 @@ cues.json entries, times in seconds:
     {"sfx": "pop.mp3", "word": 4, "volume": 0.55}
     {"sfx": "whoosh-short.mp3", "shot": "liar", "offset": -0.1, "volume": 0.25}
 word is the 0-based script word (its spoken start, from vo/times.json).
+
+finish.json (optional) picks the caption style:
+    {"captions": "word"}       one big yellow word at a time (default, the block look)
+    {"captions": "karaoke"}    groups of up to 3 white words, the word being spoken turns yellow (the Roblox look)
 shot is a name from shots.json. offset is added to that time. volume is linear, voice stays at 1.0.
 """
 import json, re, subprocess, sys
@@ -58,6 +62,38 @@ def write_captions(ep, script, start, stop):
     return path
 
 
+def write_karaoke(ep, script, start, stop):
+    """Groups of up to 3 words (a group also ends at . , ! ? : ;). The spoken word is yellow, the rest white."""
+    ass = ["[Script Info]", "ScriptType: v4.00+", "PlayResX: 1080", "PlayResY: 1920", "WrapStyle: 2", "",
+           "[V4+ Styles]",
+           "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding",
+           "Style: Kar,Inter Display Black,88,&H00FFFFFF,&H00FFFFFF,&H00000000,&H99000000,1,0,0,0,100,100,0,0,1,9,4,5,60,60,0,1",
+           "", "[Events]", "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text"]
+    groups, cur = [], []
+    for i, word in enumerate(script):
+        cur.append(i)
+        if len(cur) == 3 or re.search(r"[.,!?:;]$", word) or i == len(script) - 1:
+            groups.append(cur)
+            cur = []
+    clean = [re.sub(r"[^\w'$%-]", "", w) for w in script]
+    for g, idx in enumerate(groups):
+        g0 = start[idx[0]] - 0.03
+        nxt = groups[g + 1][0] if g + 1 < len(groups) else None
+        if nxt is not None and start[nxt] - stop[idx[-1]] < 0.9:
+            g1 = start[nxt] - 0.03
+        else:
+            g1 = stop[idx[-1]] + 0.3
+        for k, i in enumerate(idx):
+            a = g0 if k == 0 else start[i] - 0.03
+            b = start[idx[k + 1]] - 0.03 if k + 1 < len(idx) else g1
+            words = " ".join(("{\\c&H003BE2FF&}" + clean[j] + "{\\c&H00FFFFFF&}") if j == i else clean[j] for j in idx)
+            pop = "\\fscx90\\fscy90\\t(0,80,\\fscx100\\fscy100)" if k == 0 else ""
+            ass.append(f"Dialogue: 0,{ts(a)},{ts(b)},Kar,,0,0,0,,{{\\pos(540,1267){pop}}}{words}")
+    path = ep / "captions.ass"
+    path.write_text("\n".join(ass) + "\n")
+    return path
+
+
 def cue_time(cue, start, shots):
     if "word" in cue:
         t = start[cue["word"]]
@@ -74,7 +110,10 @@ def main():
     ep = Path(sys.argv[1]).resolve()
     captions_only = "--captions" in sys.argv
     script, start, stop, shots, cues = load(ep)
-    ass = write_captions(ep, script, start, stop)
+    style = json.loads((ep / "finish.json").read_text()).get("captions", "word") if (ep / "finish.json").exists() else "word"
+    if style not in ("word", "karaoke"):
+        sys.exit(f"finish.json captions must be 'word' or 'karaoke', not {style!r}")
+    ass = (write_karaoke if style == "karaoke" else write_captions)(ep, script, start, stop)
     resolved = []
     for cue in cues:
         t = cue_time(cue, start, shots)

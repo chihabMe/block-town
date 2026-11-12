@@ -29,7 +29,7 @@ ln -s ~/block-town ~/.claude/skills/block-town
 ln -s ~/block-town ~/.codex/skills/block-town
 ```
 
-A private repo: the owner invites you (GitHub → Settings → Collaborators), then you clone with SSH or HTTPS. A zip of this folder also works. Unzip it and tell the agent to read `SKILL.md`. A zip does not get later fixes; `git pull` inside the clone does.
+A zip of this folder also works. Unzip it and tell the agent to read `SKILL.md`. A zip does not get later fixes; `git pull` inside the clone does.
 
 ## Ask the agent
 
@@ -78,6 +78,11 @@ uv venv ~/.venvs/kokoro
 ```
 
 Put `kokoro-v1.0.onnx` in `~/.cache/hyperframes/tts/models/` and `voices-v1.0.bin` in `~/.cache/hyperframes/tts/voices/`. `vo.py` also honours `$KOKORO_PYTHON`.
+
+## Two looks
+
+The block look is the default. The Roblox look (round heads, printed clothes, plastic, fog and rain, karaoke captions) is
+switched on per episode with `build_town(..., style="roblox")`. See `docs/ROBLOX_LOOK.md` and `examples/ep00-roblox-look`.
 
 ## What is not built yet
 

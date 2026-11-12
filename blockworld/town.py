@@ -205,6 +205,7 @@ HAIR = {"black": "#1E1714", "brown": "#4A2A18", "dark": "#2E1C12", "ginger": "#C
         "grey": "#B9BDC6", "red": "#8E2B1E"}
 HAIR_STYLES = ("tuft", "side", "long", "bun", "pig", "curl", "cap", "beanie", "bald")
 CHARACTERS = []
+STYLE = "block"     # set by build_town(style=...)
 
 
 def hair(head, style, col, rng):
@@ -254,12 +255,20 @@ def hair(head, style, col, rng):
 
 
 def character(name, skin, shirt, pants, hair_style, hair_col, sleeves="short", stripes=None, strings=False,
-              tie=None, shoes="#F2F2F2", scale=1.0, seed=0):
+              tie=None, shoes="#F2F2F2", scale=1.0, seed=0, **look):
     """A block person. Returns a dict of its parts; pass it to pose(). The root (its location) is at the feet.
 
     sleeves "short" or "long" | stripes = a hex colour for 4 shirt stripes | strings = white hoodie strings |
     tie = a hex colour | scale = default size (1.0 = 5.3 studs tall).
+    After build_town(style="roblox") this builds the Roblox-look person instead (roblox.rchar; extra keyword
+    arguments such as top="jacket" or legs="jeans" are passed on).
     """
+    if STYLE == "roblox":
+        import roblox
+        return roblox.rchar(name, skin, shirt, pants, hair_style, hair_col, sleeves=sleeves, stripes=stripes,
+                            strings=strings, tie=tie, shoes=shoes, scale=scale, seed=seed, **look)
+    if look:
+        raise TypeError(f"{', '.join(look)} only work with build_town(style='roblox')")
     rng = random.Random(seed or name)
     ms, mt, mp = mat(skin), mat(shirt), mat(pants)
     root = empty(name)
@@ -274,7 +283,9 @@ def character(name, skin, shirt, pants, hair_style, hair_col, sleeves="short", s
     if tie:
         box((0.22, 0.04, 1.1), (0, -0.52, 1.3), mat(tie), body)
         box((0.7, 0.04, 0.3), (0, -0.52, 1.86), mat("#FFFFFF"), body)
-    parts = {"name": name, "root": root, "body": body, "torso": torso, "skin": skin, "scale": scale}
+    parts = {"name": name, "root": root, "body": body, "torso": torso, "skin": skin, "scale": scale,
+             "spec": dict(skin=skin, shirt=shirt, pants=pants, hair_style=hair_style, hair_col=hair_col, sleeves=sleeves,
+                          stripes=stripes, strings=strings, tie=tie, shoes=shoes, scale=scale, seed=seed)}
     cut = 0.95 if sleeves == "short" else 1.62
     for side, sx in (("L", -1), ("R", 1)):
         sh = empty(f"{name}.arm{side}", (sx * 1.5, 0, 1.95), body)
@@ -320,7 +331,7 @@ def pose(c, loc=None, yaw=0, face=None, armL=(0, 0), armR=(0, 0), legL=0, legR=0
     c["legR"].rotation_euler = (math.radians(-legR), 0, 0)
     c["neck"].rotation_euler = (math.radians(-head[1]), 0, math.radians(head[0]))
     if face:
-        c["face"].data.materials[0] = face_mat(c["skin"], face)
+        c["face"].data.materials[0] = c.get("face_fn", face_mat)(c["skin"], face)
 
 
 # ---------------------------------------------------------------- the town
@@ -488,13 +499,15 @@ _BUILT = False
 
 
 def build_town(rule_big, shop_signs=("CORNER SHOP", "BAKERY"), rule_title="TOWN RULE", hall_sign="TOWN HALL",
-               clock="8:00", shop_spots=((1, 30), (-1, 90))):
+               clock="8:00", shop_spots=((1, 30), (-1, 90)), style="block"):
     """Put up the street. Call once per episode, before any shot.
 
     rule_big    the rule in 3-5 words for the billboard, e.g. "1 LIE = 1 INCH"
     shop_signs  two shop names that joke about the rule (max about 12 letters each; longer text is shrunk to fit)
     shop_spots  where the two shops replace a house: (side, y) with side 1 = right (+X), -1 = left, y in HOUSE_Y
     The billboard stands on the roof of the first shop, angled toward a camera coming down the street.
+    style       "block" (the original look) or "roblox" (round heads, printed clothes, plastic, fog and rain moods:
+                see roblox.py and docs/ROBLOX_LOOK.md)
     """
     global _BUILT, TOD
     if _BUILT:
@@ -517,6 +530,13 @@ def build_town(rule_big, shop_signs=("CORNER SHOP", "BAKERY"), rule_title="TOWN 
     bs, by = shop_spots[0]
     billboard(bs * 31, by, 14, rule_title, rule_big, yaw=bs * (-90 + 22))
     clouds()
+    global STYLE
+    STYLE = style
+    if style == "roblox":
+        import roblox
+        roblox.apply()
+    elif style != "block":
+        raise ValueError(f"style must be 'block' or 'roblox', not {style!r}")
     TOD = None
     time_of_day("day")
 
@@ -559,6 +579,9 @@ cam_d.clip_start = 0.05
 cam_d.clip_end = 2000
 ELEV = 50
 TOD = None
+NOW = 0.0           # seconds since the video began, set by the runner each frame (moving rain uses it)
+TOD_HOOKS = []      # functions called with the new mode after time_of_day() changes it (the roblox look)
+PRE_RENDER = []     # functions called right before each render (the roblox look)
 TIMES = {  # horizon, zenith, sky strength, sun strength, sun colour, sun elevation, windows, bulbs, lamp watts, clouds
     "day": ("#BDE4FA", "#5CB6F2", 1.3, 3.2, "#FFF6E6", 50, 1.0, 1.0, 0, 1.0),
     "dusk": ("#B3B1C2", "#868AA0", 1.15, 1.2, "#D6DCFF", 34, 2.0, 4.0, 2500, 0.62),
@@ -575,6 +598,8 @@ def time_of_day(mode):
     global ELEV, TOD
     if mode == TOD:
         return
+    if mode not in TIMES:
+        raise ValueError(f"no time of day {mode!r}. Choose from: {', '.join(TIMES)}")
     horizon, zenith, sky, sun_e, sun_c, elev, win, bulb, lamps, cloud = TIMES[mode]
     TOD = mode
     ramp.color_ramp.elements[0].color = lin(horizon)
@@ -593,6 +618,8 @@ def time_of_day(mode):
     for o in bpy.data.objects:
         if o.get("cloud"):
             o.hide_render = mode == "night"
+    for h in TOD_HOOKS:
+        h(mode)
 
 
 key_d = bpy.data.lights.new("key", "POINT")
@@ -648,5 +675,7 @@ def setup_render(width, height, samples, quality=93):
 
 
 def render_still(path):
+    for h in PRE_RENDER:
+        h()
     scene.render.filepath = str(path)
     bpy.ops.render.render(write_still=True)

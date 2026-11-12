@@ -2,7 +2,7 @@
 
 **What this is.** The manual for building a video in our block look: the town, the people, how they move, how the
 camera moves, and how a script becomes shots. With this guide, **an idea and a script are enough to build the video**.
-The paste-ready prompts are in [`ANIMATION_PROMPTS.md`](ANIMATION_PROMPTS.md).
+The paste-ready prompts are in [`PROMPTS.md`](PROMPTS.md). This guide is the block look; the Roblox look (round heads, printed clothes, fog and rain) is in [`ROBLOX_LOOK.md`](ROBLOX_LOOK.md) and uses the same map, moves and camera rules.
 
 **Where the rules come from.** Every number here is taken from the first accepted test of this look
 (11 s, 9 shots, 2026-11-11), which is now `examples/ep01-intro`. The look reference was a public block-style video

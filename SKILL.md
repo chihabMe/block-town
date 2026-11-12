@@ -17,15 +17,23 @@ The skill folder is the directory that contains this file. Call it `SKILL` below
 
 ## What you never do
 
-- No Roblox catalog items, downloaded models, or footage from another creator. People are six boxes, built by `character()`.
+- No Roblox catalog items, downloaded models, or footage from another creator. People are built in code by `character()`, in either look.
 - No paid APIs. Blender, Kokoro, and the sound effects in `sfx/` are the toolchain. Ask before downloading anything, including a font.
 - No music in the file. No reference voice clip in the file.
 - Do not change the eight recurring characters' colours, hair, or clothes. They are defined once in `blockworld/town.py`.
 - If the script needs something `docs/GUIDE.md` lists as not built yet (a room, sitting, running, falling, holding an object), say so in the plan and show one test still before using it.
 
+## Two looks
+
+The town has two looks. **Block** (the default) is the original: cube heads, flat colours. **Roblox** is closer to the
+most-watched videos: round heads, printed clothes, shiny plastic, fog and rain, 3-word karaoke captions. Read
+`docs/ROBLOX_LOOK.md` and copy `examples/ep00-roblox-look` for it: `build_town(..., style="roblox")`,
+`run(SHOTS, tod="rain")`, and `{"captions": "karaoke"}` in `finish.json`. Ask the user which look when they don't say.
+Never switch an episode that is already in progress to the other look.
+
 ## Make an episode
 
-Copy `examples/ep01-intro` to the episode folder the user named. Replace `script.txt`, `episode.py`, and `cues.json`. Keep `vo_config.json` unless the user asked for a different voice.
+Copy `examples/ep01-intro` (block look) or `examples/ep00-roblox-look` (Roblox look) to the episode folder the user named. Replace `script.txt`, `episode.py`, and `cues.json`. Keep `vo_config.json` unless the user asked for a different voice.
 
 `episode.py` dresses the town with `build_town(rule_big, shop_signs)`, adds only the props and extra people this script needs, and ends with `run(SHOTS)`. `examples/ep01-intro/episode.py` is the pattern. Run it only through `blockworld/run.py`.
 

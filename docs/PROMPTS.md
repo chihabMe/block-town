@@ -1,7 +1,7 @@
 # Prompt pack: block-style videos
 
 Prompts for building a video in the block look. They are written for any coding agent that has this skill (Claude Code, Codex, or Grok), and
-every one of them relies on [`ANIMATION_GUIDE.md`](ANIMATION_GUIDE.md): the prompts say *what* to make, the guide
+every one of them relies on [`GUIDE.md`](GUIDE.md): the prompts say *what* to make, the guide
 says *how it must look and move*. Replace the `{curly}` fields.
 
 - **To make a whole video, use prompt 1 only.** It runs prompts 2–4 and 9 by itself and stops for approval at

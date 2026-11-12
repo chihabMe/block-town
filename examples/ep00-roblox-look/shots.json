@@ -1,0 +1,26 @@
+[
+ {
+  "name": "wide",
+  "start": 0.0
+ },
+ {
+  "name": "sign",
+  "start": 0.82
+ },
+ {
+  "name": "clock",
+  "start": 2.58
+ },
+ {
+  "name": "doors",
+  "start": 3.78
+ },
+ {
+  "name": "nia",
+  "start": 5.66
+ },
+ {
+  "name": "end",
+  "start": 7.8
+ }
+]

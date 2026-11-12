@@ -236,6 +236,7 @@ def run(shots, end=None, tod="day"):
         [{"name": n, "start": round(s, 3)} for n, s, _ in shots] + [{"name": "end", "start": END}], indent=1))
 
     def frame(T):
+        town.NOW = T
         time_of_day(tod)
         for i, c in enumerate(town.CHARACTERS):
             size(c, c["scale"])
