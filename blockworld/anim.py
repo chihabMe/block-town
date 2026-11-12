@@ -30,6 +30,7 @@ __all__ = [
     # from here
     "EP", "FPS", "SCRIPT", "WT", "WE", "widx", "line", "at", "cut", "clamp", "smooth", "back", "snap", "mix", "osc",
     "size", "feet", "card", "put", "over", "eyes", "closeup", "stand", "walk", "run", "math", "Vector",
+    "wcut", "wpop", "before_each_frame",
 ]
 
 ARGS = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
@@ -203,11 +204,36 @@ def stand(c, loc, yaw, face, T, ph=0.0, **kw):
 
 
 def walk(c, x, y0, way, T, face, ph=0.0, speed=4.5, z=WALK):
-    """Walk along the street: way = 1 toward the town hall (+Y), -1 back. Starts at y0 when T = 0. z = ground height."""
-    sw = math.sin(2 * math.pi * 2.0 * T + ph)
+    """Walk along the street: way = 1 toward the town hall (+Y), -1 back. Starts at y0 when T = 0. z = ground height.
+
+    The stride is big enough to read on a phone: opposite arms and legs, a forward lean, and a bounce on each step.
+    """
+    sw = math.sin(2 * math.pi * 2.2 * T + ph)
     s = c["root"].scale[2]
-    pose(c, (x, y0 + way * speed * s * T, z + abs(sw) * 0.14 * s), 180 if way > 0 else 0, face,
-         armL=(38 * sw, 5), armR=(-38 * sw, 5), legL=-34 * sw, legR=34 * sw, lean=-5)
+    pose(c, (x, y0 + way * speed * s * T, z + abs(sw) * 0.22 * s), 180 if way > 0 else 0, face,
+         armL=(58 * sw, 10), armR=(-58 * sw, 10), legL=-48 * sw, legR=48 * sw, lean=-8, tilt=7 * sw)
+
+
+# ---------------------------------------------------------------- word-index helpers (the Roblox-look episodes)
+def wcut(i):
+    """The cut time for script word i (0-based index into script.txt's words): 0.04 s before it is spoken."""
+    return round(WT[i] - 0.04, 3)
+
+
+def wpop(i, d=0.14):
+    """0 -> 1 over d seconds as script word i is spoken (the current frame's time). Use it to pop a tag or swap a face:
+    put(tag, loc, wpop(25)) or face = "sad" if wpop(84) > 0 else "smile"."""
+    return snap(town.NOW, WT[i], d)
+
+
+RESETS = []
+
+
+def before_each_frame(fn):
+    """Register fn(T), called at the start of every frame before the shot: put props that appear, disappear or move in
+    only some shots back to their default state (a poster that goes up later, a box held in one shot)."""
+    RESETS.append(fn)
+    return fn
 
 
 # ---------------------------------------------------------------- the runner
@@ -243,8 +269,14 @@ def run(shots, end=None, tod="day"):
             pose(c, loc=(300 + i * 12, -300, 0), face="smile")
         for c in CARDS:
             c.location, c.scale = (300, -320, -50), (0.001,) * 3
+        for fn in RESETS:
+            fn(T)
         i = max(i for i, s in enumerate(shots) if s[1] <= T + 1e-6)
         shots[i][2](T - shots[i][1], stops[i] - shots[i][1], T)
+        face = town.cam.rotation_euler.to_quaternion() @ Quaternion((1, 0, 0), math.radians(-90))
+        for c in CARDS:                    # cards face the shot's final camera, even if put() came before shot()
+            if c.scale[0] > 0.002:
+                c.rotation_quaternion = face
         return i
 
     def words_in(a, b):

@@ -1,0 +1,201 @@
+[
+{
+"sfx": "whoosh-short.mp3",
+"shot": "s02",
+"volume": 0.22,
+"offset": -0.08
+},
+{
+"sfx": "whoosh-short.mp3",
+"shot": "s05",
+"volume": 0.22,
+"offset": -0.08
+},
+{
+"sfx": "whoosh-short.mp3",
+"shot": "s16",
+"volume": 0.22,
+"offset": -0.08
+},
+{
+"sfx": "whoosh-short.mp3",
+"shot": "s28",
+"volume": 0.22,
+"offset": -0.08
+},
+{
+"sfx": "whoosh-short.mp3",
+"shot": "s30",
+"volume": 0.22,
+"offset": -0.08
+},
+{
+"sfx": "whoosh-short.mp3",
+"shot": "s37",
+"volume": 0.22,
+"offset": -0.08
+},
+{
+"sfx": "sparkle.mp3",
+"word": 8,
+"volume": 0.45
+},
+{
+"sfx": "ping.mp3",
+"word": 25,
+"volume": 0.45
+},
+{
+"sfx": "error.mp3",
+"word": 29,
+"volume": 0.3
+},
+{
+"sfx": "notification.mp3",
+"word": 37,
+"volume": 0.4
+},
+{
+"sfx": "pop.mp3",
+"word": 44,
+"volume": 0.5
+},
+{
+"sfx": "pop.mp3",
+"word": 54,
+"volume": 0.45
+},
+{
+"sfx": "pop.mp3",
+"word": 60,
+"volume": 0.45
+},
+{
+"sfx": "impact-bass-1.mp3",
+"word": 66,
+"volume": 0.7
+},
+{
+"sfx": "glitch-1.mp3",
+"word": 72,
+"volume": 0.35
+},
+{
+"sfx": "error.mp3",
+"word": 74,
+"volume": 0.3
+},
+{
+"sfx": "pop.mp3",
+"word": 80,
+"volume": 0.5
+},
+{
+"sfx": "error.mp3",
+"word": 84,
+"volume": 0.3
+},
+{
+"sfx": "click-soft.mp3",
+"word": 93,
+"volume": 0.5
+},
+{
+"sfx": "impact-bass-2.mp3",
+"word": 102,
+"volume": 0.55
+},
+{
+"sfx": "error.mp3",
+"word": 126,
+"volume": 0.32
+},
+{
+"sfx": "pop.mp3",
+"word": 134,
+"volume": 0.5
+},
+{
+"sfx": "error.mp3",
+"word": 136,
+"volume": 0.28
+},
+{
+"sfx": "pop.mp3",
+"word": 145,
+"volume": 0.5
+},
+{
+"sfx": "error.mp3",
+"word": 146,
+"volume": 0.28
+},
+{
+"sfx": "pop.mp3",
+"word": 150,
+"volume": 0.5
+},
+{
+"sfx": "error.mp3",
+"word": 154,
+"volume": 0.28
+},
+{
+"sfx": "impact-bass-1.mp3",
+"word": 161,
+"volume": 0.75
+},
+{
+"sfx": "whoosh.mp3",
+"word": 165,
+"volume": 0.3,
+"offset": -0.1
+},
+{
+"sfx": "impact-bass-2.mp3",
+"word": 188,
+"volume": 0.6
+},
+{
+"sfx": "sparkle.mp3",
+"word": 192,
+"volume": 0.45
+},
+{
+"sfx": "whoosh-cinematic.mp3",
+"word": 195,
+"volume": 0.4,
+"offset": -0.1
+},
+{
+"sfx": "chime.mp3",
+"word": 206,
+"volume": 0.5
+},
+{
+"sfx": "riser.mp3",
+"word": 211,
+"volume": 0.25,
+"offset": -0.2
+},
+{
+"sfx": "pop.mp3",
+"word": 221,
+"volume": 0.5
+},
+{
+"sfx": "click-soft.mp3",
+"word": 230,
+"volume": 0.5
+},
+{
+"sfx": "notification.mp3",
+"word": 236,
+"volume": 0.45
+},
+{
+"sfx": "sparkle.mp3",
+"word": 239,
+"volume": 0.5
+}
+]

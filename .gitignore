@@ -13,3 +13,6 @@ examples/*/captions.ass
 *.m4a
 !sfx/*.mp3
 examples/*/vo/voice_raw.mp3
+examples/**/stills/
+examples/**/frames/
+examples/*/speedtest/

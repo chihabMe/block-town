@@ -248,7 +248,7 @@ function `f(t, d, T)` (`t` = seconds since the shot began, `d` = shot length, `T
 | Move | When | Recipe |
 |---|---|---|
 | **Breathe** | Any held pose | `stand(...)`, a different `ph` per character |
-| **Walk** | Background life, entering | `walk(...)`: arms ±38°, legs ±34°, lean −5, bob 0.14, speed 4.5 studs/s × scale |
+| **Walk** | Background life, entering | `walk(...)`: arms ±58°, legs ±48°, lean −8, side tilt ±7, bob 0.22, speed 4.5 studs/s × scale |
 | **Snap to a new pose** | The key word of the shot | `k = snap(t, WT[i] - shot_start)`, then `mix(poseA, poseB, k)` for arms, lean and head; swap the face when `k > 0` |
 | **Wave** | Greeting, "look at me" | Arm `(10, 140 + osc(T, 2.5, 18))`. Raise arms **outward**, not forward: a forward raise covers the face |
 | **Proud announce** | A claim, a lie, a speech | One arm `(10, 138)`, the other `(20, 34)`, lean back 5, look up 10, `smug`, with a speech bubble |

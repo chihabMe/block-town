@@ -1,76 +1,105 @@
 ---
 name: block-town
 description: >
-  Build a vertical block-style "in this town" video from an idea and a script.
-  The skill contains the Blender town, the eight characters, the poses, the camera,
-  the captions and the sound. Use when the user says make a block-style video,
-  "in this town", block town, the town kit, or /block-town. Also when they ask
-  to animate a script in the block look, add a character or prop to that town,
-  or finish captions and sound for one of these episodes.
+  Make a vertical "In this town / In this world" rule-story video in a Roblox-style 3D town, from an idea to a
+  finished 1080x1920 MP4: rule, script, the niche narrator voice, world and characters built in Blender from code,
+  shots, karaoke captions, sound effects and the music bed. Use when the user says make an "in this town" or
+  "in this world" video, a Roblox story, block town, the town kit, or /block-town; or asks to write such a script,
+  make its voice, animate it, add a character, prop or landmark to the town, or finish captions and sound.
 ---
 
 # Block town
 
-An idea and a script are enough. This folder is the whole kit: the street, the people, how they move, and how a script becomes a vertical video. `docs/GUIDE.md` is the law for every number. `docs/PROMPTS.md` is the prompt pack. Read both before building.
+This folder is the whole kit: the town, the cast, how they move, the voice, the music settings, and the steps from an
+idea to a finished vertical video. The skill folder is the directory that contains this file; it is called `SKILL`
+below. Episodes live outside it (the user names the folder), called `EPISODE` below. Use absolute paths.
 
-The skill folder is the directory that contains this file. Call it `SKILL` below. Do not look for an older test folder. Do not invent a second town.
+Read before building: `docs/ROBLOX_LOOK.md` (the world, the cast, the props, how shots are made),
+`docs/SCRIPT.md` (how the story is written), `docs/VOICE.md` (voice and music). `docs/PROMPTS.md` has a prompt for
+each stage. `docs/GUIDE.md` is the original block-look manual: the map, `pose()`, the moves and camera rules still
+apply to both looks.
 
-## What you never do
+## Never
 
-- No Roblox catalog items, downloaded models, or footage from another creator. People are built in code by `character()`, in either look.
-- No paid API calls without the user's yes. Blender, the voice (`docs/VOICE.md`: Fish Audio's free test model or
-  offline Kokoro), and the sound effects in `sfx/` are the toolchain. Ask before downloading anything, including a font.
-- The kit holds no music and no reference voice clip. Music goes in only from a file the user supplies (`docs/VOICE.md`).
-- Do not change the eight recurring characters' colours, hair, or clothes. They are defined once in `blockworld/town.py`.
-- If the script needs something `docs/GUIDE.md` lists as not built yet (a room, sitting, running, falling, holding an object), say so in the plan and show one test still before using it.
+- No Roblox catalog items, downloaded models, or footage, stories or audio from other creators. Everything in the
+  picture is built in code. Viral videos may be studied for craft, never reused.
+- No paid API calls without the user's yes for that call. The free Fish Audio model is for tests; the posted take uses
+  the paid one (about $0.04 per episode) only after the user approves. Ask before downloading anything.
+- No music and no reference voice clips in this kit. Music goes in only from a file the user supplies.
+- Do not change the eight recurring characters (colours, hair, clothes): `blockworld/town.py`.
+- Do not switch an episode that is already in progress to another look.
 
-## Two looks
+## The look
 
-The town has two looks. **Block** (the default) is the original: cube heads, flat colours. **Roblox** is closer to the
-most-watched videos: round heads, printed clothes, shiny plastic, fog and rain, 3-word karaoke captions. Read
-`docs/ROBLOX_LOOK.md` and copy `examples/ep00-roblox-look` for it: `build_town(..., style="roblox")`,
-`run(SHOTS, tod="rain")`, and `{"captions": "karaoke"}` in `finish.json`. Ask the user which look when they don't say.
-Never switch an episode that is already in progress to the other look.
+New episodes use the **Roblox look**: `build_town(..., style="roblox")`. Round heads with anime faces, layered hair,
+printed clothes, shiny plastic, sun / fog / rain moods, 3-word karaoke captions. The older **block look** (cube heads,
+flat colours) is still there for episodes that started in it: `build_town(...)` without `style` gives the block look,
+so always write `style="roblox"` in a new episode.
 
-## Make an episode
+## Make an episode: seven gates
 
-Copy `examples/ep01-intro` (block look) or `examples/ep00-roblox-look` (Roblox look) to the episode folder the user named. Replace `script.txt`, `episode.py`, and `cues.json`. Keep `vo_config.json` unless the user asked for a different voice.
+Stop after every gate, show the result, and wait for the user. Where there is a real creative choice, offer two or
+three options and say which you recommend.
 
-`episode.py` dresses the town with `build_town(rule_big, shop_signs)`, adds only the props and extra people this script needs, and ends with `run(SHOTS)`. `examples/ep01-intro/episode.py` is the pattern. Run it only through `blockworld/run.py`.
+| Gate | What you make | Show the user |
+|---|---|---|
+| 1 Rule | Three rules (from the user's idea or `docs/SCRIPT.md` tests), each with a mood and a landmark idea | a table |
+| 2 Script | `EPISODE/script.txt` (one sentence a line) and `EPISODE/SCRIPT.md`: option A and B, beat table, critic scores | the script |
+| 3 Voice | `vo.py`, `words.py`, `voice_check.py` (free Fish take) | `vo/voice.wav`, its numbers |
+| 4 Designs | `EPISODE/design/episode.py`: one still of every new landmark, prop, costume and character | `DESIGN_SHEET.jpg` |
+| 5 Stills | `EPISODE/episode.py` with every shot; `check`; stills; fix; `contact_sheet.py` | `CONTACT_SHEET.jpg` |
+| 6 Hook | the first ~15 s rendered and finished | the MP4 |
+| 7 Full video | all frames, `finish.py` (clean file + music file); on approval, the paid voice take | both MP4s |
 
-Work in six stages. Stop after each one and wait for the user.
+Gate details are in `docs/PROMPTS.md` (prompt 1 runs the whole thing). Copy `examples/ep05-wifi` to start: it is a
+finished 61-second episode made exactly this way, with its design sheet, 42 shots, cues and settings.
 
-1. **Plan.** Write `PLAN.md` in the episode folder: the world sheet, the cast sheet, and one row per shot (prompts 2–4 in `docs/PROMPTS.md`). Give two or three options where there is a real choice.
-2. **Voice.** `python3 SKILL/blockworld/vo.py EPISODE`, then `python3 SKILL/blockworld/words.py EPISODE`. The voice
-   settings are in `docs/VOICE.md` (Fish Audio "Roblox" for the niche voice, Kokoro offline). Play the audio. If more
-   than 15% of the words were guessed, say so.
-3. **New designs.** One still of each new character, prop, or face, next to Nia or Man.
-4. **Stills.** Two half-size stills of every shot. Look at the images. Fix them against the checklist in `docs/GUIDE.md` section 11 before showing a contact sheet.
-5. **Hook.** Render and finish the first 10–15 seconds.
-6. **Full render.** Render the rest, then `python3 SKILL/blockworld/finish.py EPISODE`. Watch and listen to the file before calling it done, and say plainly if you did not.
+A paid final take is a new recording: run `words.py` again, then `check`, and re-render (the shots follow the word
+times). So approve the free take's timing at gate 3, but make the paid take before gate 6 if the user wants to post.
 
 ## Commands
 
-From any directory, with `SKILL` and `EPISODE` as absolute paths:
-
 ```bash
-python3 SKILL/blockworld/vo.py EPISODE
-python3 SKILL/blockworld/words.py EPISODE
+# voice (gate 3)
+python3 SKILL/blockworld/vo.py EPISODE                 # one take in the Fish "Roblox" voice (vo_config.json)
+python3 SKILL/blockworld/vo.py EPISODE --post-only     # redo tighten / presence / tempo on the saved take, no new call
+python3 SKILL/blockworld/words.py EPISODE              # word times -> vo/times.json
+python3 -I SKILL/blockworld/voice_check.py EPISODE     # pace, pauses, brightness against the viral ranges
+
+# pictures (gates 4-7); run with --factory-startup, always through run.py
 blender -b --factory-startup --python-exit-code 1 -P SKILL/blockworld/run.py -- EPISODE check
-blender -b --factory-startup --python-exit-code 1 -P SKILL/blockworld/run.py -- EPISODE stills
-blender -b --factory-startup --python-exit-code 1 -P SKILL/blockworld/run.py -- EPISODE frame 2.5
-blender -b --factory-startup --python-exit-code 1 -P SKILL/blockworld/run.py -- EPISODE render
-blender -b --factory-startup --python-exit-code 1 -P SKILL/blockworld/run.py -- EPISODE resume
-python3 SKILL/blockworld/finish.py EPISODE --captions
-python3 SKILL/blockworld/finish.py EPISODE
+blender -b --factory-startup --python-exit-code 1 -P SKILL/blockworld/run.py -- EPISODE stills [shot ...]
+blender -b --factory-startup --python-exit-code 1 -P SKILL/blockworld/run.py -- EPISODE frame 12.5
+blender -b --factory-startup --python-exit-code 1 -P SKILL/blockworld/run.py -- EPISODE render F0 F1
+bash SKILL/blockworld/render_all.sh EPISODE            # every missing frame, restarting Blender if it stops
+python3 -I SKILL/blockworld/contact_sheet.py EPISODE   # one numbered still per shot -> CONTACT_SHEET.jpg
+
+# finishing (gates 6-7)
+python3 SKILL/blockworld/finish.py EPISODE                       # captions + sound effects -> EPISODE/<name>.mp4
+python3 SKILL/blockworld/finish.py EPISODE --music /path/numbers.mp3   # also <name>_music.mp4
 ```
 
-`check` renders nothing. It runs every shot and prints the shot table. `stills` writes two pictures per shot, at 30% and 85%, into `EPISODE/stills/`. `render` writes `EPISODE/frames/f_####.jpg` at 1080×1920. About 4.5 seconds per final frame on the machine this was built on, so a two-minute episode is several hours. Render it in the background. `resume` fills only the missing frames.
+- `check` renders nothing: it runs every shot, prints the shot table and warns about shots over 2.5 s.
+- `stills` writes two half-size pictures per shot (30% and 85% through) into `EPISODE/stills/`. Render them in groups
+  of about 12 shots if your commands have a time limit. **Look at every still** before showing any.
+- Final frames are 1080x1920 JPEGs, about 3.5 s each in sun, about 6.6 s in rain or fog on the machine this was made on:
+  a 60-second sunny episode is about 1.5–2 hours. Run `render_all.sh` in the background. Something else on the
+  machine may stop Blender; `render_all.sh` resumes from the last frame.
+- The hook: `render 0 F1` where `F1` is the frame just before the first cut after ~15 s, then `finish.py`
+  (it uses the frames that exist), and rename the MP4 so the full video does not overwrite it.
+- Watch and listen to the final file before calling it done. If you cannot listen, say so plainly.
+- Delete `frames/` after the user accepts the video (about 180 KB a frame).
 
-A final frame is a JPEG of about 180 KB. Delete `frames/` after the user accepts the video.
+## What goes where
 
-## One-shot pieces
-
-Prompts 2–10 in `docs/PROMPTS.md` do one piece: the world sheet, the cast sheet, the shot plan, the shot functions, a new prop, a new character, a new face, a stills check, or notes on a cut. Use prompt 1 only when the user wants the whole video.
-
-New faces are drawn with `python3 SKILL/blockworld/faces.py SKILL/blockworld/faces` (needs Pillow), then used by name in `pose()`.
+| Path | What |
+|---|---|
+| `blockworld/town.py` | the street, the cast, `pose()`, light, camera, `build_town(style=...)` |
+| `blockworld/roblox.py` | the Roblox look: `rchar`, plastic, moods, `rule_sign`, `giant_clock`, `puddles` |
+| `blockworld/rprops.py` | ready props: signal-bar tags, phones and phone inserts, poster, sash, top hat, bus, door, beam, pigeon, Wi-Fi tower |
+| `blockworld/anim.py` | word timing helpers, cards (tags, bubbles), `stand`, `walk`, the runner |
+| `blockworld/vo.py`, `words.py`, `voice_check.py` | voice, word times, voice check |
+| `blockworld/finish.py` | captions, sound effects, music, the MP4 |
+| `sfx/` | free sound effects (Pixabay licence, `sfx/CREDITS.md`) |
+| `examples/ep05-wifi` | the full worked episode (Roblox look) |
+| `examples/ep00-roblox-look`, `examples/ep01-intro` | short demos of the Roblox look and the block look |

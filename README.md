@@ -1,93 +1,75 @@
 # Block town
 
-A skill for making vertical block-style "in this town" videos. You give a coding agent the idea and the script. The agent builds the episode from this folder: the street, the eight characters, the poses, the camera, the captions, and the sound.
+A skill for Claude Code and Codex that makes vertical "In this town / In this world" rule-story videos in a
+Roblox-style 3D town, from an idea to a finished 1080x1920 MP4. You give the agent an idea; it writes the script,
+makes the narrator voice, builds the world and the characters in Blender from code, plans the shots, and finishes the
+video with karaoke captions, sound effects and the music bed. It stops after every step for your answer.
 
-It does not need the earlier experiments. `examples/ep01-intro` is a finished 9-shot intro (about 11 seconds) that shows the pattern. `docs/GUIDE.md` is the manual. `SKILL.md` is what the agent follows.
+Everything in the picture is built in code. The kit uses no Roblox models, no downloaded footage and no music.
 
-People are original block characters drawn from boxes. This kit does not use Roblox models or catalog items.
+`examples/ep05-wifi` is a finished 61-second episode made with it ("In this world, your Wi-Fi gets stronger the nicer
+you are"): 42 shots, its script options, design sheet and all settings.
 
-## What a friend installs
+## What to install
 
-Blender 4.2 or newer (tested on 5.2), ffmpeg, and Python 3.11+. Pillow is only needed when adding a face. The narration step needs an OpenRouter key (Fish Audio voice) or a local [Kokoro](https://github.com/thewh1teagle/kokoro-onnx) install; a `voice.wav` you already made can be dropped into the episode instead. Word timing uses whisper.cpp, `faster-whisper`, or `openai-whisper`, whichever is on the machine.
+| Tool | Why | Notes |
+|---|---|---|
+| [Blender](https://www.blender.org/download/) 4.2 or newer | renders the town | tested on 5.2; `blender` must be on the PATH |
+| ffmpeg | captions, sound, the MP4 | with libass (most builds have it) |
+| Python 3.11+ with `numpy` and `Pillow` | voice check, contact sheets, face drawing | `pip install numpy pillow` |
+| whisper.cpp, `faster-whisper` or `openai-whisper` | word timing for cuts and captions | whichever is easiest; `words.py` finds it |
+| An [OpenRouter](https://openrouter.ai) key | the narrator voice (Fish Audio "Roblox") | free model for tests; about $0.04 per posted episode |
 
-Sound effects in `sfx/` are from Pixabay and are free to use. See `sfx/CREDITS.md`. The sign font is DejaVu Sans Bold. The caption font is Inter Display Black. Both licenses are in `blockworld/fonts/`.
+Put the key in your environment or in `~/.env`:
+
+```bash
+echo 'OPENROUTER_API_KEY=sk-or-...' >> ~/.env
+```
+
+No key? `vo.py` also runs Kokoro offline (see `docs/VOICE.md`); it is close to the niche voice but not the same.
+
+Music is not included. The top videos use "Numbers" by TEMPOREX; either add it in TikTok's sound picker when you
+post, or give the agent a copy you got yourself (`docs/VOICE.md`).
 
 ## Install the skill
 
-Claude Code reads `~/.claude/skills/<name>/SKILL.md`. Codex reads `~/.codex/skills/<name>/SKILL.md`.
-
-```bash
-git clone https://github.com/chihabMe/block-town.git ~/.claude/skills/block-town
-git clone https://github.com/chihabMe/block-town.git ~/.codex/skills/block-town
-```
-
-Use one clone and a link if you would rather not keep two copies:
-
 ```bash
 git clone https://github.com/chihabMe/block-town.git ~/block-town
-ln -s ~/block-town ~/.claude/skills/block-town
-ln -s ~/block-town ~/.codex/skills/block-town
+ln -s ~/block-town ~/.claude/skills/block-town      # Claude Code
+ln -s ~/block-town ~/.codex/skills/block-town       # Codex
 ```
 
-A zip of this folder also works. Unzip it and tell the agent to read `SKILL.md`. A zip does not get later fixes; `git pull` inside the clone does.
+Update later with `git -C ~/block-town pull`.
 
-## Ask the agent
+## Make a video
+
+Paste this into the agent (prompt 1 in `docs/PROMPTS.md`):
 
 ```
-Make a block-style video.
-Idea: In this town, every secret you keep turns your hair blue.
-Script: episodes/ep02-secrets/script.txt
-Follow the block-town skill. Stop after each stage.
+Make an "In this world / In this town" video with the block-town skill, in the Roblox look.
+Idea: pick one
+Episode folder: ~/videos/ep06
+Follow SKILL.md's seven gates and stop after each one for my answer.
 ```
 
-The agent should stop after the plan, the voice, any new designs, the stills, the first 10–15 seconds, and then the full video.
+The seven gates: three rules → the script → the voice → a design sheet → a still of every shot → the first 15 seconds
+finished → the full video. A 60-second sunny episode renders in about 1.5–2 hours on a normal PC; rain and fog take
+longer.
 
-## Run the intro yourself
-
-From this folder:
+## Try it without making anything new
 
 ```bash
-blender -b --factory-startup --python-exit-code 1 -P blockworld/run.py -- examples/ep01-intro check
-blender -b --factory-startup --python-exit-code 1 -P blockworld/run.py -- examples/ep01-intro stills
+cd ~/block-town
+blender -b --factory-startup --python-exit-code 1 -P blockworld/run.py -- examples/ep05-wifi check
+blender -b --factory-startup --python-exit-code 1 -P blockworld/run.py -- examples/ep05-wifi stills s01 s16 s42
+python3 -I blockworld/voice_check.py examples/ep05-wifi
 ```
 
-`check` renders nothing and prints the nine shots. `stills` writes two pictures of each shot into `examples/ep01-intro/stills/`. The example already contains `vo/voice.wav` and `vo/times.json`, so the pictures line up with the narration.
+`check` prints the 42 shots against the narration; `stills` renders three of them into `examples/ep05-wifi/stills/`.
 
-Rendering the whole intro is `render` instead of `stills` (333 frames, on the order of 25 minutes on the machine this was built on). Then:
+## What's where
 
-```bash
-python3 blockworld/finish.py examples/ep01-intro
-```
-
-That writes `examples/ep01-intro/ep01-intro.mp4` with one-word captions and the sound effects. There is no music in the file.
-
-## New episode
-
-Copy `examples/ep01-intro`. Replace `script.txt`, write new shot functions in `episode.py`, and list the sound effects in `cues.json`. Make a new narration only when the words changed:
-
-```bash
-python3 blockworld/vo.py EPISODE
-python3 blockworld/words.py EPISODE
-```
-
-The voice is set in the episode's `vo_config.json` (see `docs/VOICE.md`). The Roblox example uses the Fish Audio
-"Roblox" voice, the one the top creators use: it needs a free OpenRouter key in `OPENROUTER_API_KEY` (or in `~/.env`).
-The block example uses Kokoro, which runs offline.
-
-Kokoro setup, once, if `vo.py` cannot find it:
-
-```bash
-uv venv ~/.venvs/kokoro
-~/.venvs/kokoro/bin/pip install kokoro-onnx soundfile numpy
-```
-
-Put `kokoro-v1.0.onnx` in `~/.cache/hyperframes/tts/models/` and `voices-v1.0.bin` in `~/.cache/hyperframes/tts/voices/`. `vo.py` also honours `$KOKORO_PYTHON`.
-
-## Two looks
-
-The block look is the default. The Roblox look (round heads, printed clothes, plastic, fog and rain, karaoke captions) is
-switched on per episode with `build_town(..., style="roblox")`. See `docs/ROBLOX_LOOK.md` and `examples/ep00-roblox-look`.
-
-## What is not built yet
-
-Rooms, sitting, running, falling, and holding an object. The guide lists them. A script that needs one gets a test still before any shot uses it.
+`SKILL.md` is what the agent follows. `docs/SCRIPT.md` (story), `docs/ROBLOX_LOOK.md` (world, cast, props, shots),
+`docs/VOICE.md` (voice and music), `docs/PROMPTS.md` (a prompt per step), `docs/GUIDE.md` (the original block-look
+manual). Sound effects in `sfx/` are from Pixabay (`sfx/CREDITS.md`); fonts are DejaVu Sans and Inter
+(licences in `blockworld/fonts/`).

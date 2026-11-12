@@ -1,0 +1,26 @@
+[
+ {
+  "name": "tower",
+  "start": 0.0
+ },
+ {
+  "name": "cast1",
+  "start": 1.0
+ },
+ {
+  "name": "mayor",
+  "start": 2.0
+ },
+ {
+  "name": "cast2",
+  "start": 3.0
+ },
+ {
+  "name": "phone",
+  "start": 4.0
+ },
+ {
+  "name": "end",
+  "start": 5.0
+ }
+]
