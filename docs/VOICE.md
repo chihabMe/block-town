@@ -51,6 +51,6 @@ could be identified). Scary episodes use a quiet, eerie track instead. The kit c
   `"music": "numbers.mp3"` to `finish.json` (or pass `--music <file>`). `finish.py` then also writes
   `<episode>_music.mp4` with the song under the voice. Settings measured on the top videos:
   `"music_loop": 20.5` (they loop the song's first 20.5 seconds, its instrumental intro, for the whole video) and
-  `"music_db": -4` (a steady 3–5 dB under the voice, never ducked). On our voice -7 keeps the words clearer;
-  the example uses -7.
+  `"music_db": -4` (a steady 3–5 dB under the voice, never ducked). On our voice -9 keeps the words clearer;
+  the example uses -9.
   The top creators mix it in this way, and a video with a copyrighted song in it can be muted or claimed.
