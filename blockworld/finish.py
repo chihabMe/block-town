@@ -123,6 +123,27 @@ def mean_db(path, seconds=60):
     return float(m.group(1))
 
 
+def loudness(path):
+    out = subprocess.run(["ffmpeg", "-hide_banner", "-i", str(path), "-af", "ebur128", "-f", "null", "-"],
+                         capture_output=True, text=True).stderr
+    m = re.findall(r"I:\s+(-?[\d.]+) LUFS", out)
+    return float(m[-1]) if m else None
+
+
+def fix_loudness(path, target=-14.0):
+    """The one-pass loudnorm can land 1-3 dB low when sound effects make big peaks. Measure the file, and if it is more
+    than 0.5 dB off, change the audio gain (with a -1.5 dBTP limiter) and copy the video untouched."""
+    now = loudness(path)
+    if now is None or abs(now - target) <= 0.5:
+        return now
+    tmp = path.with_suffix(".fix.mp4")
+    subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(path), "-c:v", "copy", "-af",
+                    f"volume={target - now:.2f}dB,alimiter=limit=0.84:level=false", "-c:a", "aac", "-b:a", "256k",
+                    str(tmp)], check=True)
+    tmp.replace(path)
+    return loudness(path)
+
+
 def encode(ep, out, ass, voice, resolved, music=None):
     frames = ep / "frames" / "f_%04d.jpg"
     cmd = ["ffmpeg", "-y", "-loglevel", "error", "-framerate", "30", "-i", str(frames), "-i", str(voice)]
@@ -148,7 +169,7 @@ def encode(ep, out, ass, voice, resolved, music=None):
             "-c:v", "libx264", "-preset", "slow", "-crf", "17", "-maxrate", "6M", "-bufsize", "12M", "-pix_fmt", "yuv420p",
             "-c:a", "aac", "-b:a", "256k", "-shortest", str(out)]
     subprocess.run(cmd, check=True)
-    print("wrote", out)
+    print("wrote", out, f"({fix_loudness(out):.1f} LUFS)")
 
 
 def main():
