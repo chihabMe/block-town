@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>html,body{margin:0;background:#000;overflow:hidden}canvas{display:block}</style>
+</head>
+<body>
+<script type="importmap">
+{ "imports": { "three": "./node_modules/three/build/three.module.js",
+               "three/addons/": "./node_modules/three/examples/jsm/" } }
+</script>
+<script type="module">
+// The block-town renderer. Plays back frames baked from Blender (bake.py): scene.glb geometry, materials.json recipes,
+// anim.json + anim.bin poses. Served by capture.mjs (scene.html and node_modules from the kit, the rest from the bake).
+// Coordinates stay Blender's (Z up), so Blender matrices are used as they are.
+import * as THREE from "three";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+
+const W = 1080, H = 1920;
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(1);
+renderer.setSize(W, H);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.NoToneMapping;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.autoClear = false;
+renderer.shadowMap.autoUpdate = false;        // the shadow map is drawn once per frame, not per pass
+document.body.appendChild(renderer.domElement);
+
+const [M, A, BIN] = await Promise.all([
+  fetch("materials.json").then(r => r.json()),
+  fetch("anim.json").then(r => r.json()),
+  fetch("anim.bin").then(r => r.arrayBuffer()).then(b => new Float32Array(b)),
+]);
+const N = A.frames;
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(50, W / H, 0.05, 2000);
+camera.matrixAutoUpdate = false;
+scene.add(camera);
+const OVERLAY = 1;            // tags and bubbles: drawn in a second pass, on top of everything
+
+// ---------------------------------------------------------------- sky (Blender: Generated Z -> colour ramp)
+const skyU = { hor: { value: new THREE.Vector3() }, zen: { value: new THREE.Vector3() }, top: { value: 0.45 },
+               k: { value: 1 } };
+function skyMaterial(output) {
+  return new THREE.ShaderMaterial({
+    side: THREE.BackSide, depthWrite: false, uniforms: skyU,
+    vertexShader: `varying vec3 vDir; void main(){ vDir = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
+    fragmentShader: `uniform vec3 hor, zen; uniform float top, k; varying vec3 vDir;
+      void main(){ float z = normalize(vDir).z; float t = clamp(z / top, 0.0, 1.0);
+        gl_FragColor = vec4(mix(hor, zen, t) * k, 1.0);
+        ${output ? "#include <colorspace_fragment>" : ""}
+      }`,
+  });
+}
+const skyDome = new THREE.Mesh(new THREE.SphereGeometry(1500, 48, 24), skyMaterial(true));
+skyDome.frustumCulled = false;
+skyDome.renderOrder = -1;
+scene.add(skyDome);
+const envScene = new THREE.Scene();
+envScene.add(new THREE.Mesh(new THREE.SphereGeometry(100, 48, 24), skyMaterial(false)));
+const pmrem = new THREE.PMREMGenerator(renderer);
+let envKey = "", envTarget = null;
+function setSky(s) {
+  skyU.hor.value.set(s[0], s[1], s[2]); skyU.zen.value.set(s[3], s[4], s[5]); skyU.k.value = s[6];
+  const key = s.join(",");
+  if (key !== envKey) {                         // re-light only when the sky changes (dusk flashback)
+    envKey = key;
+    if (envTarget) envTarget.dispose();
+    envTarget = pmrem.fromScene(envScene, 0);
+    scene.environment = envTarget.texture;
+  }
+}
+
+// ---------------------------------------------------------------- lights
+const sun = new THREE.DirectionalLight(0xffffff, 3);
+sun.castShadow = true;
+sun.shadow.mapSize.set(4096, 4096);
+sun.shadow.bias = -0.0004;
+sun.shadow.normalBias = 0.03;
+sun.shadow.radius = 3;
+scene.add(sun, sun.target);
+const key = new THREE.PointLight(0xffffff, 0, 0, 2);
+scene.add(key);
+const lamps = M.lamps.map((l) => {
+  const m = new THREE.Matrix4().fromArray(l.m);
+  const s = new THREE.SpotLight(0xffffff, 0, 60, l.size / 2, l.blend, 2);
+  s.color.setRGB(l.c[0], l.c[1], l.c[2], THREE.LinearSRGBColorSpace);
+  s.position.setFromMatrixPosition(m);
+  const dir = new THREE.Vector3(-m.elements[8], -m.elements[9], -m.elements[10]);
+  s.target.position.copy(s.position).add(dir);
+  scene.add(s, s.target);
+  return s;
+});
+for (const l of [sun, key, ...lamps]) l.layers.enableAll();
+
+// ---------------------------------------------------------------- materials from recipes
+const texLoader = new THREE.TextureLoader();
+const texCache = {};
+const texWait = [];
+function tex(src, flipY) {
+  const k = src + flipY;
+  if (!texCache[k]) {
+    const t = texLoader.load(src);
+    texWait.push(new Promise((ok) => { const id = setInterval(() => { if (t.image) { clearInterval(id); ok(); } }, 20); }));
+    t.colorSpace = THREE.SRGBColorSpace; t.flipY = flipY;
+    t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping;
+    t.anisotropy = 4;
+    texCache[k] = t;
+  }
+  return texCache[k];
+}
+const v3 = (c) => new THREE.Color().setRGB(c[0], c[1], c[2], THREE.LinearSRGBColorSpace);
+
+function makeMat(name, d) {
+  const m = new THREE.MeshStandardMaterial({
+    color: v3(d.color), roughness: d.rough, metalness: 0, side: THREE.DoubleSide,
+    emissive: v3(d.emit), emissiveIntensity: d.emit_s,
+  });
+  m.name = name;
+  const U = { specK: { value: Math.min(d.spec / 0.5, 1.0) } };
+  let frag = "";
+  if (d.kind === "multiply") { m.map = tex(d.img.src, false); }
+  else if (d.kind === "image") { m.map = tex(d.img.src, false); m.color.setRGB(1, 1, 1); }
+  if (d.emit_img) { m.emissiveMap = tex(d.emit_img.src, false); m.emissive.setRGB(1, 1, 1); }
+  else if (d.kind === "banded") {
+    U.colB = { value: v3(d.B) }; U.freq = { value: d.freq }; U.thr = { value: d.thr };
+    frag = `if (fract(vWPos.z * freq) < thr) diffuseColor.rgb = colB;`;
+  } else if (d.kind === "brick") {
+    const b = d.brick;
+    U.c1 = { value: v3(b.Color1) }; U.c2 = { value: v3(b.Color2) }; U.mortar = { value: v3(b.Mortar) };
+    U.bw = { value: b["Brick Width"] }; U.rh = { value: b["Row Height"] }; U.ms = { value: b["Mortar Size"] };
+    U.off = { value: b.offset };
+    frag = `{ vec2 p = vec2(vWPos.x + vWPos.y, vWPos.z);
+      float row = floor(p.y / rh);
+      float u = p.x + (mod(row, 2.0) < 1.0 ? off * bw : 0.0);
+      float bn = floor(u / bw);
+      float x = u - bn * bw, y = p.y - row * rh;
+      float h = fract(sin(dot(vec2(bn, row), vec2(12.9898, 78.233))) * 43758.5453);
+      vec3 c = mix(c1, c2, h);
+      if (x < ms || x > bw - ms || y < ms || y > rh - ms) c = mortar;
+      diffuseColor.rgb = c; }`;
+  } else if (d.kind === "decal") {
+    const obj = d.img.proj === "objproj";
+    U.decal = { value: tex(d.img.src, obj) };
+    if (!obj) m.defines = { USE_UV: "" };
+    const uv = obj ? "vec2(vOPos.x * 0.8 + 0.5, vOPos.z * 0.8 + 0.5)" : "vUv";
+    const mask = d.front_only ? " * step(vOPos.y, 0.0)" : "";
+    frag = `{ vec2 q = ${uv}; vec4 t = texture2D(decal, q);
+      float a = (q.x < 0.0 || q.x > 1.0 || q.y < 0.0 || q.y > 1.0) ? 0.0 : t.a${mask};
+      diffuseColor.rgb = mix(diffuseColor.rgb, t.rgb, a); }`;
+  }
+  m.onBeforeCompile = (s) => {
+    Object.assign(s.uniforms, U);
+    const decl = Object.keys(U).map((k) => {
+      const v = U[k].value;
+      const t = v.isTexture ? "sampler2D" : (v.isColor || v.isVector3) ? "vec3" : "float";
+      return `uniform ${t} ${k};`;
+    }).join("\n");
+    s.vertexShader = "varying vec3 vWPos; varying vec3 vOPos;\n" + s.vertexShader.replace("#include <project_vertex>",
+      "#include <project_vertex>\n vOPos = position; vWPos = (modelMatrix * vec4(transformed, 1.0)).xyz;");
+    s.fragmentShader = "varying vec3 vWPos; varying vec3 vOPos;\n" + decl + "\n" + s.fragmentShader
+      .replace("#include <map_fragment>", "#include <map_fragment>\n" + frag)
+      .replace("#include <lights_fragment_end>", "#include <lights_fragment_end>\n reflectedLight.directSpecular *= specK; reflectedLight.indirectSpecular *= specK;");
+  };
+  m.customProgramCacheKey = () => name;
+  return m;
+}
+const MATS = {};
+for (const [name, d] of Object.entries(M.materials)) MATS[name] = makeMat(name, d);
+
+// ---------------------------------------------------------------- geometry
+const gltf = await new GLTFLoader().loadAsync("scene.glb");
+const nodes = {};
+gltf.scene.traverse((o) => { if (o.userData && o.userData.hid !== undefined) nodes[o.userData.hid] = o; });
+const info = Object.fromEntries(M.objects.map((o) => [o.hid, o]));
+let missing = 0;
+const meshesOf = {};
+for (const [hid, o] of Object.entries(nodes)) {
+  o.removeFromParent();
+  scene.add(o);
+  o.matrixAutoUpdate = false;
+  const list = o.isMesh ? [o] : o.children.filter((c) => c.isMesh);
+  meshesOf[hid] = list;
+  const ov = info[hid] && info[hid].overlay;
+  for (const mesh of list) {
+    const mm = MATS[mesh.material.name];
+    if (mm) mesh.material = mm; else missing++;
+    mesh.castShadow = !ov && (!info[hid] || info[hid].shadow !== false);
+    mesh.receiveShadow = !ov;
+    if (ov) mesh.layers.set(OVERLAY);
+  }
+  if (ov) o.layers.set(OVERLAY);
+}
+function place(hid, arr, off, v) {
+  const o = nodes[hid];
+  if (!o) return;
+  o.matrix.fromArray(arr, off);
+  o.matrixWorldNeedsUpdate = true;
+  o.visible = !!v;
+}
+for (const [hid, s] of Object.entries(A.static)) place(hid, s.m, 0, s.v);
+
+const fwd = new THREE.Vector3(), tmp = new THREE.Matrix4(), focus = new THREE.Vector3();
+window.renderAt = (i) => {
+  const t0 = performance.now();
+  A.dynamic.forEach((d, k) => {
+    place(d.hid, BIN, (k * N + i) * 16, d.v[i]);
+    if (d.s) meshesOf[d.hid].forEach((mesh, j) => { const mm = MATS[d.s[i][j]]; if (mm) mesh.material = mm; });
+  });
+  for (const [name, vals] of Object.entries(A.emit)) if (MATS[name]) MATS[name].emissiveIntensity = vals[i];
+  setSky(A.sky[i]);
+  const c = A.cam[i];
+  camera.matrix.fromArray(c.m);
+  camera.matrixWorldNeedsUpdate = true;
+  camera.fov = c.fov; camera.updateProjectionMatrix();
+  camera.updateMatrixWorld(true);
+  skyDome.position.setFromMatrixPosition(camera.matrixWorld);
+  const s = A.sun[i];
+  tmp.fromArray(s.m);
+  const dir = new THREE.Vector3(-tmp.elements[8], -tmp.elements[9], -tmp.elements[10]).normalize();
+  fwd.set(-camera.matrixWorld.elements[8], -camera.matrixWorld.elements[9], -camera.matrixWorld.elements[10]);
+  focus.setFromMatrixPosition(camera.matrixWorld).addScaledVector(fwd, 14);
+  sun.target.position.copy(focus);
+  sun.position.copy(focus).addScaledVector(dir, -120);
+  sun.color.setRGB(s.c[0], s.c[1], s.c[2], THREE.LinearSRGBColorSpace);
+  sun.intensity = s.e;
+  const sc = sun.shadow.camera; sc.left = -22; sc.right = 22; sc.top = 22; sc.bottom = -22; sc.near = 60; sc.far = 220;
+  sc.updateProjectionMatrix();
+  const k = A.key[i];
+  key.position.set(k.p[0], k.p[1], k.p[2]);
+  key.intensity = k.e / (4 * Math.PI);
+  key.color.setRGB(k.c[0], k.c[1], k.c[2], THREE.LinearSRGBColorSpace);
+  for (const l of lamps) l.intensity = A.lamp[i] / (4 * Math.PI);      // Blender watts -> rough candela
+  renderer.clear();
+  renderer.shadowMap.needsUpdate = true;
+  camera.layers.set(0);
+  renderer.render(scene, camera);
+  renderer.clearDepth();
+  camera.layers.set(OVERLAY);
+  renderer.render(scene, camera);
+  renderer.getContext().finish();
+  return performance.now() - t0;
+};
+
+setSky(A.sky[0]);
+await Promise.all(texWait);
+const gl = renderer.getContext();
+const dbg = gl.getExtension("WEBGL_debug_renderer_info");
+window.__check = { gpu: dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : "?", nodes: Object.keys(nodes).length,
+                   missing, frames: N, f0: A.f0, dynamic: A.dynamic.length, overlay: M.objects.filter(o => o.overlay).length };
+window.__ready = true;
+</script>
+</body>
+</html>

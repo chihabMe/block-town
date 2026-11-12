@@ -10,6 +10,7 @@ The full command needs frames/f_####.jpg and vo/voice.wav, and writes EPISODE_DI
 cues.json entries, times in seconds:
     {"sfx": "pop.mp3", "word": 4, "volume": 0.55}
     {"sfx": "whoosh-short.mp3", "shot": "liar", "offset": -0.1, "volume": 0.25}
+    {"sfx": "el-street-day-loop.mp3", "shot": "s01", "length": 6.0, "volume": 0.12}   (length: loop it that long)
 word is the 0-based script word (its spoken start, from vo/times.json).
 
 finish.json (optional) picks the caption style:
@@ -20,13 +21,16 @@ finish.json (optional) picks the caption style:
                                <name>.mp4 (no music: post it and add the song from TikTok's sound picker) and
                                <name>_music.mp4 (music mixed in, like the top creators do; their videos can be muted
                                or claimed for it).
+    "voice": "vo/voice_level.wav"   use the levelled narration (blockworld/level_voice.py)
+    "loudness": "static"       one fixed gain for the whole mix (no automatic loudness riding, so loud sound effects
+                               can't make the voice dip afterwards); a limiter catches the peaks
     "music_db": -4             music loudness against the voice (the top "Numbers" videos measure -3 to -4 dB)
     "music_start": 0           seconds into the song to start from
     "music_loop": 20.5         loop only this many seconds of the song (from music_start). The top "Numbers" videos
                                loop the song's first 20.5 s, its instrumental intro, for the whole video
 shot is a name from shots.json. offset is added to that time. volume is linear, voice stays at 1.0.
 """
-import json, re, subprocess, sys
+import json, math, re, subprocess, sys
 from pathlib import Path
 
 SKILL = Path(__file__).resolve().parent.parent
@@ -123,6 +127,21 @@ def mean_db(path, seconds=60):
     return float(m.group(1))
 
 
+def momentary(path, pick="max"):
+    """Momentary loudness (400 ms) of a file: its loudest moment ("max") or its typical speech level ("median")."""
+    out = subprocess.run(["ffmpeg", "-hide_banner", "-i", str(path), "-af",
+                          "apad=pad_dur=0.5,ebur128=metadata=1,ametadata=print:key=lavfi.r128.M:file=-",
+                          "-f", "null", "-"], capture_output=True, text=True).stdout
+    vals = [float(v) for v in re.findall(r"lavfi.r128.M=(-?[\d.]+)", out)]
+    vals = [v for v in vals if v > -60]
+    if not vals:
+        return None
+    if pick == "median":
+        vals = sorted(v for v in vals if v > max(vals) - 15)
+        return vals[len(vals) // 2]
+    return max(vals)
+
+
 def loudness(path):
     out = subprocess.run(["ffmpeg", "-hide_banner", "-i", str(path), "-af", "ebur128", "-f", "null", "-"],
                          capture_output=True, text=True).stderr
@@ -144,14 +163,21 @@ def fix_loudness(path, target=-14.0):
     return loudness(path)
 
 
-def encode(ep, out, ass, voice, resolved, music=None):
+def encode(ep, out, ass, voice, resolved, music=None, static=False):
     frames = ep / "frames" / "f_%04d.jpg"
     cmd = ["ffmpeg", "-y", "-loglevel", "error", "-framerate", "30", "-i", str(frames), "-i", str(voice)]
     filters, extra = [], []
-    for i, (src, t, vol) in enumerate(resolved):
-        cmd += ["-i", str(src)]
+    for i, (src, t, vol, *rest) in enumerate(resolved):
+        length = rest[0] if rest else None
         ms = max(0, int(t * 1000))
-        filters.append(f"[{i + 2}]adelay={ms}|{ms},volume={vol}[s{i}]")
+        if length:                                   # a looping bed: repeat the file for length seconds, soft edges
+            cmd += ["-stream_loop", "-1", "-i", str(src)]
+            fade = min(0.4, length / 4)
+            filters.append(f"[{i + 2}]atrim=0:{length:.3f},asetpts=N/SR/TB,afade=t=in:d={fade:.2f},"
+                           f"afade=t=out:st={length - fade:.3f}:d={fade:.2f},adelay={ms}|{ms},volume={vol}[s{i}]")
+        else:
+            cmd += ["-i", str(src)]
+            filters.append(f"[{i + 2}]adelay={ms}|{ms},volume={vol}[s{i}]")
         extra.append(f"[s{i}]")
     if music:
         path, gain_db, start, length, loop = music
@@ -162,8 +188,10 @@ def encode(ep, out, ass, voice, resolved, music=None):
         filters.append(f"[{k}]{looped}atrim=0:{length:.3f},volume={gain_db:.2f}dB,"
                        f"afade=t=out:st={max(0.0, length - 0.6):.3f}:d=0.6[m]")
         extra.append("[m]")
-    mix = "[1]apad,volume=1.0[v];" + "".join(f + ";" for f in filters) + "[v]" + "".join(extra) + \
-          f"amix=inputs={len(extra) + 1}:normalize=0:duration=first,loudnorm=I=-14:TP=-1.5:LRA=11,aresample=48000[a]"
+    voice_fx = "acompressor=threshold=0.1:ratio=3:attack=4:release=80:makeup=1.5," if static else ""
+    mix = f"[1]{voice_fx}apad,volume=1.0[v];" + "".join(f + ";" for f in filters) + "[v]" + "".join(extra) + \
+          f"amix=inputs={len(extra) + 1}:normalize=0:duration=first," + \
+          ("" if static else "loudnorm=I=-14:TP=-1.5:LRA=11,") + "aresample=48000[a]"
     cmd += ["-filter_complex", f"[0]ass={esc(ass)}:fontsdir={esc(FONTS)}[vid];" + mix,
             "-map", "[vid]", "-map", "[a]",
             "-c:v", "libx264", "-preset", "slow", "-crf", "17", "-maxrate", "6M", "-bufsize", "12M", "-pix_fmt", "yuv420p",
@@ -189,17 +217,34 @@ def main():
         src = SFX / cue["sfx"]
         if not src.exists():
             sys.exit(f"missing sound effect {src.name} (looked in {SFX})")
-        resolved.append((src, t, float(cue["volume"])))
+        resolved.append((src, t, float(cue["volume"]), float(cue["length"]) if cue.get("length") else None))
         print(f"  {t:6.2f}s  {cue['volume']:4.2f}  {cue['sfx']}")
     print("wrote", ass, "|", len(script), "caption words,", len(resolved), "sound cues")
     if captions_only:
         return
-    voice = ep / "vo" / "voice.wav"
+    voice = ep / conf.get("voice", "vo/voice.wav")      # e.g. vo/voice_level.wav from level_voice.py
+    if not voice.exists() and voice.name == "voice_level.wav" and (ep / "vo" / "voice.wav").exists():
+        subprocess.run([sys.executable, "-I", str(Path(__file__).resolve().parent / "level_voice.py"), str(ep)],
+                       check=True)                     # levelled narration missing: make it from voice.wav
+    static = conf.get("loudness") == "static"           # one fixed gain for the whole mix: the voice never dips
     if not (ep / "frames" / "f_0000.jpg").exists():
         sys.exit(f"no frames in {ep / 'frames'}. Render first, or use --captions.")
     if not voice.exists():
         sys.exit(f"no narration at {voice}")
-    encode(ep, ep / f"{ep.name}.mp4", ass, voice, resolved)
+    if static:
+        # A cue's volume now means the same thing for every file: 0.5 puts the effect's loudest moment 4 dB under the
+        # voice's speaking level, 0.25 puts it 10 dB under, 1.0 puts it 2 dB over. Loud files no longer jump out.
+        speech = momentary(voice, "median")
+        cache, rel = {}, []
+        for src, t, vol, length in resolved:
+            if src not in cache:
+                cache[src] = momentary(src) or speech
+            target = speech - 4 + 20 * math.log10(max(vol, 1e-3) / 0.5)
+            gain = 10 ** ((target - cache[src]) / 20)
+            rel.append((src, t, round(gain, 4), length))
+        print(f"static mix: speech at {speech:.1f} LUFS momentary; effects set relative to it")
+        resolved = rel
+    encode(ep, ep / f"{ep.name}.mp4", ass, voice, resolved, static=static)
     if "--music" in sys.argv:
         conf["music"] = sys.argv[sys.argv.index("--music") + 1]
     if conf.get("music"):
@@ -212,7 +257,7 @@ def main():
         gain = mean_db(voice) + float(conf.get("music_db", -4)) - mean_db(song)
         print(f"music: {song.name}, {gain:+.1f} dB to sit {conf.get('music_db', -4)} dB under the voice")
         encode(ep, ep / f"{ep.name}_music.mp4", ass, voice, resolved,
-               (song, gain, start, length, float(conf.get("music_loop", 0))))
+               (song, gain, start, length, float(conf.get("music_loop", 0))), static=static)
 
 
 if __name__ == "__main__":

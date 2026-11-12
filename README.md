@@ -14,7 +14,8 @@ you are"): 42 shots, its script options, design sheet and all settings.
 
 | Tool | Why | Notes |
 |---|---|---|
-| [Blender](https://www.blender.org/download/) 4.2 or newer | renders the town | tested on 5.2; `blender` must be on the PATH |
+| [Blender](https://www.blender.org/download/) 4.2 or newer | builds and poses the town | tested on 5.2; `blender` must be on the PATH |
+| [Node.js](https://nodejs.org) 20+ and Chrome or Chromium | draws the final frames (Three.js) | `npm install` runs by itself on the first render; `CHROME=/path` if Chrome is somewhere unusual |
 | ffmpeg | captions, sound, the MP4 | with libass (most builds have it) |
 | Python 3.11+ with `numpy` and `Pillow` | voice check, contact sheets, face drawing | `pip install numpy pillow` |
 | whisper.cpp, `faster-whisper` or `openai-whisper` | word timing for cuts and captions | whichever is easiest; `words.py` finds it |
@@ -27,6 +28,10 @@ echo 'OPENROUTER_API_KEY=sk-or-...' >> ~/.env
 ```
 
 No key? `vo.py` also runs Kokoro offline (see `docs/VOICE.md`); it is close to the niche voice but not the same.
+
+Sound effects made to order (optional): an [ElevenLabs](https://elevenlabs.io) plan with a commercial licence
+(Starter or higher) and its API key in `~/.config/elevenlabs/env` (`ELEVENLABS_API_KEY=...`). Without it the kit uses
+its free Pixabay set. See `docs/SOUND.md`.
 
 Music is not included. The top videos use "Numbers" by TEMPOREX; either add it in TikTok's sound picker when you
 post, or give the agent a copy you got yourself (`docs/VOICE.md`).
@@ -53,8 +58,8 @@ Follow SKILL.md's seven gates and stop after each one for my answer.
 ```
 
 The seven gates: three rules → the script → the voice → a design sheet → a still of every shot → the first 15 seconds
-finished → the full video. A 60-second sunny episode renders in about 1.5–2 hours on a normal PC; rain and fog take
-longer.
+finished → the full video. Blender builds and poses every frame and Three.js draws it: a 66-second episode takes
+about 10–12 minutes from frames to finished MP4 on a laptop (Blender's own renderer took about 3 hours).
 
 ## Try it without making anything new
 
@@ -70,6 +75,7 @@ python3 -I blockworld/voice_check.py examples/ep05-wifi
 ## What's where
 
 `SKILL.md` is what the agent follows. `docs/SCRIPT.md` (story), `docs/ROBLOX_LOOK.md` (world, cast, props, shots),
-`docs/VOICE.md` (voice and music), `docs/PROMPTS.md` (a prompt per step), `docs/GUIDE.md` (the original block-look
+`docs/RENDER.md` (the Three.js renderer, the life layer, phone screens), `docs/SOUND.md` (sound effects, ElevenLabs,
+the steady-voice mix), `docs/VOICE.md` (voice and music), `docs/PROMPTS.md` (a prompt per step), `docs/GUIDE.md` (the original block-look
 manual). Sound effects in `sfx/` are from Pixabay (`sfx/CREDITS.md`); fonts are DejaVu Sans and Inter
 (licences in `blockworld/fonts/`).

@@ -11,12 +11,13 @@ MODE:  check                 no rendering: runs every shot function, prints the 
 Nothing is keyframed. Every frame is posed from code: a shot is a function f(t, d, T)
 (t = seconds since the shot began, d = the shot's length, T = seconds since the video began).
 """
-import json, math, re, sys, wave
+import json, math, os, re, sys, time, wave
 from pathlib import Path
 
 import bpy
 from mathutils import Quaternion, Vector
 
+import life
 import town
 from town import (ALL, BOY, DAD, GRAN, HOUSE_Y, KID, LX, MAN, NIA, ROAD, RX, TALL, TEACH, WALK, WIN, banded, box, brick,
                   build_town, character, cylinder, empty, face_names, lin, mat, park, pose, shot, sign_mat, text,
@@ -39,6 +40,7 @@ if not ARGS:
 EP = Path(ARGS[0]).resolve()
 MODE = ARGS[1] if len(ARGS) > 1 else "check"
 FPS = 30
+LIFE = os.environ.get("BT_LIFE") == "1"   # extra motion layer, see life.py
 
 # ---------------------------------------------------------------- the words and when they are spoken
 LINES = [l.split() for l in (EP / "script.txt").read_text().splitlines() if l.strip()]
@@ -273,10 +275,15 @@ def run(shots, end=None, tod="day"):
             fn(T)
         i = max(i for i, s in enumerate(shots) if s[1] <= T + 1e-6)
         shots[i][2](T - shots[i][1], stops[i] - shots[i][1], T)
+        if LIFE:                           # extra idle motion, camera wobble and scene sway (blockworld/life.py)
+            life.apply(T, T - shots[i][1], stops[i] - shots[i][1])
         face = town.cam.rotation_euler.to_quaternion() @ Quaternion((1, 0, 0), math.radians(-90))
         for c in CARDS:                    # cards face the shot's final camera, even if put() came before shot()
             if c.scale[0] > 0.002:
                 c.rotation_quaternion = face
+        if LIFE:
+            life.place_cards(T, CARDS)
+            life.float_cards(T, CARDS)
         return i
 
     def words_in(a, b):
@@ -317,16 +324,67 @@ def run(shots, end=None, tod="day"):
     elif MODE in ("render", "resume"):
         if ESTIMATED:
             raise SystemExit("word times are estimated: make the narration (vo.py, words.py) before the final render")
-        town.setup_render(1080, 1920, 32)
-        (EP / "frames").mkdir(exist_ok=True)
+        samples = int(os.environ.get("BT_SAMPLES", "32"))
+        frame_root = Path(os.environ["BT_FRAME_DIR"]) if os.environ.get("BT_FRAME_DIR") else (EP / "frames")
+        town.setup_render(1080, 1920, samples)
+        if os.environ.get("BT_ENGINE", "").lower() == "workbench":
+            # Workbench reads the material viewport colour, not the shader nodes.
+            town.scene.render.engine = "BLENDER_WORKBENCH"
+            sh = town.scene.display.shading
+            sh.light = "STUDIO"
+            sh.color_type = "MATERIAL"
+            for name, val in (("show_shadows", True), ("use_scene_lights", False), ("use_scene_world", False)):
+                if hasattr(sh, name):
+                    setattr(sh, name, val)
+            for m in bpy.data.materials:
+                nt = m.node_tree
+                if not m.use_nodes or nt is None or "Principled BSDF" not in nt.nodes:
+                    continue
+                sock = nt.nodes["Principled BSDF"].inputs.get("Base Color")
+                if sock is not None:
+                    m.diffuse_color = sock.default_value
+            if town.scene.world is not None:
+                town.scene.world.color = (0.55, 0.78, 0.95)
+            print("BT_ENGINE workbench", flush=True)
+        elif os.environ.get("BT_ENGINE", "").lower() == "cycles":
+            # CPU only. This Vega is before RDNA1, so Cycles HIP cannot run.
+            town.scene.render.engine = "CYCLES"
+            try:
+                prefs = bpy.context.preferences.addons["cycles"].preferences
+                prefs.compute_device_type = "NONE"
+            except (KeyError, AttributeError, TypeError):
+                pass
+            cyc = town.scene.cycles
+            cyc.device = "CPU"
+            cyc.samples = samples
+            for name, val in (
+                ("use_adaptive_sampling", False),
+                ("use_denoising", True),
+                ("max_bounces", 4),
+                ("diffuse_bounces", 2),
+                ("glossy_bounces", 2),
+                ("transmission_bounces", 0),
+                ("volume_bounces", 0),
+            ):
+                if hasattr(cyc, name):
+                    setattr(cyc, name, val)
+            print("BT_ENGINE cycles CPU samples", samples, flush=True)
+        frame_root.mkdir(parents=True, exist_ok=True)
         f0 = int(ARGS[2]) if MODE == "render" and len(ARGS) > 2 else 0
         f1 = int(ARGS[3]) if MODE == "render" and len(ARGS) > 3 else math.ceil(END * FPS) - 1
+        cap = float(os.environ.get("BT_MAX_FRAME_SECONDS", "0") or "0")
         for f in range(f0, f1 + 1):
-            out = EP / "frames" / f"f_{f:04d}.jpg"
+            out = frame_root / f"f_{f:04d}.jpg"
             if MODE == "resume" and out.exists():
                 continue
+            t0 = time.perf_counter()
             frame(f / FPS)
             town.render_still(out)
-            print("frame", f, "of", f1, flush=True)
+            dt = time.perf_counter() - t0
+            print(f"frame {f} of {f1} in {dt:.2f}s", flush=True)
+            # The first frame pays for kernel startup. Later frames must each beat the cap.
+            if cap and f > f0 and dt > cap:
+                print(f"STOP frame {f} took {dt:.1f}s over {cap:.0f}s", flush=True)
+                raise SystemExit(3)
     else:
         raise SystemExit(f"unknown mode {MODE!r}: use check, stills, frame, render or resume")

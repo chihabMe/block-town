@@ -1,1 +1,7 @@
-{"captions": "karaoke", "music_loop": 20.5, "music_db": -9}
+{
+ "captions": "karaoke",
+ "music_loop": 20.5,
+ "music_db": -9,
+ "voice": "vo/voice_level.wav",
+ "loudness": "static"
+}

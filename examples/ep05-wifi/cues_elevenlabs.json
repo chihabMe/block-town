@@ -1,0 +1,294 @@
+[
+ {
+  "sfx": "el-street-day-loop.mp3",
+  "volume": 0.07,
+  "shot": "s01",
+  "length": 61.46
+ },
+ {
+  "sfx": "el-tower-hum-loop.mp3",
+  "volume": 0.16,
+  "shot": "s01",
+  "length": 2.02
+ },
+ {
+  "sfx": "el-tower-hum-loop.mp3",
+  "volume": 0.16,
+  "shot": "s05",
+  "length": 1.32
+ },
+ {
+  "sfx": "el-wifi-zap.mp3",
+  "volume": 0.3,
+  "shot": "s02",
+  "offset": 0.05
+ },
+ {
+  "sfx": "el-spinner-loop.mp3",
+  "volume": 0.22,
+  "shot": "s17",
+  "length": 2.24
+ },
+ {
+  "sfx": "el-spinner-loop.mp3",
+  "volume": 0.22,
+  "shot": "s39",
+  "length": 1.4
+ },
+ {
+  "sfx": "el-whoosh-cut.mp3",
+  "volume": 0.22,
+  "shot": "s02",
+  "offset": -0.08
+ },
+ {
+  "sfx": "el-whoosh-cut.mp3",
+  "volume": 0.22,
+  "shot": "s05",
+  "offset": -0.08
+ },
+ {
+  "sfx": "el-whoosh-cut.mp3",
+  "volume": 0.22,
+  "shot": "s28",
+  "offset": -0.08
+ },
+ {
+  "sfx": "el-whoosh-cut.mp3",
+  "volume": 0.22,
+  "shot": "s30",
+  "offset": -0.08
+ },
+ {
+  "sfx": "el-whoosh-cut.mp3",
+  "volume": 0.22,
+  "shot": "s37",
+  "offset": -0.08
+ },
+ {
+  "sfx": "el-whoosh-zoom.mp3",
+  "volume": 0.25,
+  "shot": "s16",
+  "offset": -0.08
+ },
+ {
+  "sfx": "el-power-up.mp3",
+  "volume": 0.4,
+  "word": 8
+ },
+ {
+  "sfx": "ep05-4k-sparkle.mp3",
+  "volume": 0.45,
+  "word": 25
+ },
+ {
+  "sfx": "el-signal-up.mp3",
+  "volume": 0.3,
+  "offset": 0.1,
+  "word": 25
+ },
+ {
+  "sfx": "el-buffering-stall.mp3",
+  "volume": 0.35,
+  "word": 29
+ },
+ {
+  "sfx": "ep05-baby-giggle.mp3",
+  "volume": 0.4,
+  "word": 37
+ },
+ {
+  "sfx": "el-signal-up.mp3",
+  "volume": 0.28,
+  "offset": 0.15,
+  "word": 37
+ },
+ {
+  "sfx": "el-tag-pop.mp3",
+  "volume": 0.45,
+  "word": 44
+ },
+ {
+  "sfx": "ep05-honk-held-back.mp3",
+  "volume": 0.35,
+  "word": 52
+ },
+ {
+  "sfx": "el-bubble-pop.mp3",
+  "volume": 0.45,
+  "word": 54
+ },
+ {
+  "sfx": "el-bus-idle.mp3",
+  "volume": 0.25,
+  "shot": "s13"
+ },
+ {
+  "sfx": "el-bubble-pop.mp3",
+  "volume": 0.45,
+  "word": 60
+ },
+ {
+  "sfx": "ep05-yell.mp3",
+  "volume": 0.5,
+  "word": 66
+ },
+ {
+  "sfx": "el-impact-boom.mp3",
+  "volume": 0.42,
+  "word": 66
+ },
+ {
+  "sfx": "el-buffering-stall.mp3",
+  "volume": 0.32,
+  "word": 72
+ },
+ {
+  "sfx": "el-tag-pop.mp3",
+  "volume": 0.45,
+  "word": 80
+ },
+ {
+  "sfx": "el-no-signal.mp3",
+  "volume": 0.3,
+  "word": 84
+ },
+ {
+  "sfx": "el-searching.mp3",
+  "volume": 0.35,
+  "word": 93
+ },
+ {
+  "sfx": "el-footsteps-sneakers.mp3",
+  "volume": 0.3,
+  "shot": "s18"
+ },
+ {
+  "sfx": "el-record-scratch.mp3",
+  "volume": 0.45,
+  "word": 102
+ },
+ {
+  "sfx": "el-no-signal.mp3",
+  "volume": 0.32,
+  "word": 126
+ },
+ {
+  "sfx": "el-door-open.mp3",
+  "volume": 0.3,
+  "word": 133
+ },
+ {
+  "sfx": "el-tag-pop.mp3",
+  "volume": 0.45,
+  "word": 134
+ },
+ {
+  "sfx": "el-no-signal.mp3",
+  "volume": 0.28,
+  "word": 136
+ },
+ {
+  "sfx": "ep05-lunch-tray.mp3",
+  "volume": 0.4,
+  "word": 142
+ },
+ {
+  "sfx": "el-tag-pop.mp3",
+  "volume": 0.45,
+  "word": 145
+ },
+ {
+  "sfx": "el-no-signal.mp3",
+  "volume": 0.28,
+  "word": 146
+ },
+ {
+  "sfx": "el-bubble-pop.mp3",
+  "volume": 0.45,
+  "word": 150
+ },
+ {
+  "sfx": "el-sad-trombone.mp3",
+  "volume": 0.4,
+  "word": 154
+ },
+ {
+  "sfx": "ep05-mayor-poster.mp3",
+  "volume": 0.5,
+  "word": 161
+ },
+ {
+  "sfx": "el-impact-boom.mp3",
+  "volume": 0.45,
+  "word": 161
+ },
+ {
+  "sfx": "el-gasp-crowd.mp3",
+  "volume": 0.4,
+  "offset": -0.1,
+  "word": 165
+ },
+ {
+  "sfx": "ep05-repair-laugh.mp3",
+  "volume": 0.45,
+  "word": 184
+ },
+ {
+  "sfx": "el-impact-boom.mp3",
+  "volume": 0.45,
+  "word": 188
+ },
+ {
+  "sfx": "el-power-up.mp3",
+  "volume": 0.45,
+  "word": 192
+ },
+ {
+  "sfx": "ep05-wifi-river.mp3",
+  "volume": 0.4,
+  "offset": -0.1,
+  "word": 197
+ },
+ {
+  "sfx": "el-counter-tick.mp3",
+  "volume": 0.35,
+  "word": 206
+ },
+ {
+  "sfx": "el-ding-correct.mp3",
+  "volume": 0.4,
+  "word": 210
+ },
+ {
+  "sfx": "el-riser-short.mp3",
+  "volume": 0.3,
+  "offset": -0.2,
+  "word": 211
+ },
+ {
+  "sfx": "el-bubble-pop.mp3",
+  "volume": 0.45,
+  "word": 221
+ },
+ {
+  "sfx": "el-searching.mp3",
+  "volume": 0.35,
+  "word": 230
+ },
+ {
+  "sfx": "el-message-in.mp3",
+  "volume": 0.45,
+  "word": 234
+ },
+ {
+  "sfx": "el-heart-pops.mp3",
+  "volume": 0.45,
+  "word": 236
+ },
+ {
+  "sfx": "ep05-4k-sparkle.mp3",
+  "volume": 0.45,
+  "word": 240
+ }
+]
