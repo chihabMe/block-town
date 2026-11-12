@@ -18,6 +18,8 @@ Two engines, picked by "engine" in vo_config.json:
            Then the take is made to sound like the top videos (measured on 8 of them, 2026-11-12):
            "tighten": true    cuts every pause down to 0.05 s: they have 0-9% silence and almost no pauses
            "presence_db": 4.5 a treble lift above 2.5 kHz: their voices are brighter than the raw Fish take
+           "tempo": 0.95      slower (< 1) or faster (> 1) without changing the pitch. Default 1.0
+           python3 blockworld/vo.py EPISODE --post-only   redoes these steps on the saved take, with no new request
 
   "kokoro" (default, free and offline, scores about 0.85-0.88):
     {"blend": "af_jessica:3,am_puck:2", "pitch_semitones": 3, "default_speed": 1.3, "default_pause": 0.18,
@@ -67,16 +69,23 @@ def fish(ep, cfg):
                        "response_format": "mp3"}).encode()
     req = urllib.request.Request("https://openrouter.ai/api/v1/audio/speech", data=body,
                                  headers={"Authorization": f"Bearer {openrouter_key()}", "Content-Type": "application/json"})
-    print(f"one take, {len(text)} characters, model {model}")
-    try:
-        with urllib.request.urlopen(req, timeout=600) as r:
-            (out / "voice_raw.mp3").write_bytes(r.read())
-    except urllib.error.HTTPError as e:
-        sys.exit(f"OpenRouter said {e.code}: {e.read()[:300].decode(errors='replace')}")
+    if "--post-only" in sys.argv:
+        if not (out / "voice_raw.mp3").exists():
+            sys.exit(f"--post-only needs a saved take at {out / 'voice_raw.mp3'}")
+        print("reusing the saved take", out / "voice_raw.mp3")
+    else:
+        print(f"one take, {len(text)} characters, model {model}")
+        try:
+            with urllib.request.urlopen(req, timeout=600) as r:
+                (out / "voice_raw.mp3").write_bytes(r.read())
+        except urllib.error.HTTPError as e:
+            sys.exit(f"OpenRouter said {e.code}: {e.read()[:300].decode(errors='replace')}")
     af = []
     if cfg.get("tighten", True):
         af.append("silenceremove=start_periods=1:start_threshold=-45dB:stop_periods=-1:stop_duration=0.08"
                   ":stop_threshold=-42dB:stop_silence=0.05")
+    if float(cfg.get("tempo", 1.0)) != 1.0:
+        af.append(f"atempo={float(cfg['tempo'])}")
     if cfg.get("presence_db", 4.5):
         af.append(f"highshelf=f=2500:g={float(cfg.get('presence_db', 4.5))}")
     subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(out / "voice_raw.mp3"),
