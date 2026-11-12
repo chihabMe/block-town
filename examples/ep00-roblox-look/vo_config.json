@@ -1,2 +1,1 @@
-{"blend": "af_jessica:3,am_puck:2", "pitch_semitones": 3, "default_speed": 1.12, "default_pause": 0.22,
- "speed": {"1": 1.08}, "pause": {"1": 0.32, "2": 0.4}}
+{"engine": "fish", "voice": "eb4bcc6dbb634e9eaee239c94266935e", "model": "fish-audio/s2.1-pro-free:free"}

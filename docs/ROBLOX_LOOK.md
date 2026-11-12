@@ -50,8 +50,8 @@ differently for one episode.
    glide past a crowd, sweep up to the landmark. Low camera angles for anything big or threatening.
 5. **Big, readable acting.** Running crowds (`walk(..., speed=7.5)` with `"scared"`), a face that snaps on the key
    word, close-ups for every feeling.
-6. **Music is added in TikTok, never in the file.** Comedy: "Numbers" (TEMPOREX). Scary: pick a quiet eerie track
-   in TikTok's sound picker.
+6. **The niche voice and "Numbers".** Narrate with the Fish Audio "Roblox" voice and put "Numbers" (TEMPOREX)
+   under the whole video, about 4 dB under the voice. See `docs/VOICE.md` for both, and for what is safe to post.
 
 ## Pieces (blockworld/roblox.py)
 

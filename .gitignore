@@ -7,3 +7,9 @@ examples/*/vo/words.json
 examples/*/vo/voice_raw.wav
 *.mp4
 examples/*/captions.ass
+
+# music the user supplies stays local (copyright)
+*.mp3
+*.m4a
+!sfx/*.mp3
+examples/*/vo/voice_raw.mp3

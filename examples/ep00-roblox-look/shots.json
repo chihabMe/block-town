@@ -5,22 +5,22 @@
  },
  {
   "name": "sign",
-  "start": 0.82
+  "start": 0.71
  },
  {
   "name": "clock",
-  "start": 2.58
+  "start": 2.04
  },
  {
   "name": "doors",
-  "start": 3.78
+  "start": 3.24
  },
  {
   "name": "nia",
-  "start": 5.66
+  "start": 4.5
  },
  {
   "name": "end",
-  "start": 7.8
+  "start": 6.84
  }
 ]

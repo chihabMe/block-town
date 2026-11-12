@@ -18,8 +18,9 @@ The skill folder is the directory that contains this file. Call it `SKILL` below
 ## What you never do
 
 - No Roblox catalog items, downloaded models, or footage from another creator. People are built in code by `character()`, in either look.
-- No paid APIs. Blender, Kokoro, and the sound effects in `sfx/` are the toolchain. Ask before downloading anything, including a font.
-- No music in the file. No reference voice clip in the file.
+- No paid API calls without the user's yes. Blender, the voice (`docs/VOICE.md`: Fish Audio's free test model or
+  offline Kokoro), and the sound effects in `sfx/` are the toolchain. Ask before downloading anything, including a font.
+- The kit holds no music and no reference voice clip. Music goes in only from a file the user supplies (`docs/VOICE.md`).
 - Do not change the eight recurring characters' colours, hair, or clothes. They are defined once in `blockworld/town.py`.
 - If the script needs something `docs/GUIDE.md` lists as not built yet (a room, sitting, running, falling, holding an object), say so in the plan and show one test still before using it.
 
@@ -40,7 +41,9 @@ Copy `examples/ep01-intro` (block look) or `examples/ep00-roblox-look` (Roblox l
 Work in six stages. Stop after each one and wait for the user.
 
 1. **Plan.** Write `PLAN.md` in the episode folder: the world sheet, the cast sheet, and one row per shot (prompts 2–4 in `docs/PROMPTS.md`). Give two or three options where there is a real choice.
-2. **Voice.** `python3 SKILL/blockworld/vo.py EPISODE`, then `python3 SKILL/blockworld/words.py EPISODE`. Play the audio. If more than 15% of the words were guessed, say so.
+2. **Voice.** `python3 SKILL/blockworld/vo.py EPISODE`, then `python3 SKILL/blockworld/words.py EPISODE`. The voice
+   settings are in `docs/VOICE.md` (Fish Audio "Roblox" for the niche voice, Kokoro offline). Play the audio. If more
+   than 15% of the words were guessed, say so.
 3. **New designs.** One still of each new character, prop, or face, next to Nia or Man.
 4. **Stills.** Two half-size stills of every shot. Look at the images. Fix them against the checklist in `docs/GUIDE.md` section 11 before showing a contact sheet.
 5. **Hook.** Render and finish the first 10–15 seconds.

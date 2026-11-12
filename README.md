@@ -8,7 +8,7 @@ People are original block characters drawn from boxes. This kit does not use Rob
 
 ## What a friend installs
 
-Blender 4.2 or newer (tested on 5.2), ffmpeg, and Python 3.11+. Pillow is only needed when adding a face. The narration step needs a local [Kokoro](https://github.com/thewh1teagle/kokoro-onnx) install; a `voice.wav` you already made can be dropped into the episode instead. Word timing uses whisper.cpp, `faster-whisper`, or `openai-whisper`, whichever is on the machine.
+Blender 4.2 or newer (tested on 5.2), ffmpeg, and Python 3.11+. Pillow is only needed when adding a face. The narration step needs an OpenRouter key (Fish Audio voice) or a local [Kokoro](https://github.com/thewh1teagle/kokoro-onnx) install; a `voice.wav` you already made can be dropped into the episode instead. Word timing uses whisper.cpp, `faster-whisper`, or `openai-whisper`, whichever is on the machine.
 
 Sound effects in `sfx/` are from Pixabay and are free to use. See `sfx/CREDITS.md`. The sign font is DejaVu Sans Bold. The caption font is Inter Display Black. Both licenses are in `blockworld/fonts/`.
 
@@ -69,6 +69,10 @@ Copy `examples/ep01-intro`. Replace `script.txt`, write new shot functions in `e
 python3 blockworld/vo.py EPISODE
 python3 blockworld/words.py EPISODE
 ```
+
+The voice is set in the episode's `vo_config.json` (see `docs/VOICE.md`). The Roblox example uses the Fish Audio
+"Roblox" voice, the one the top creators use: it needs a free OpenRouter key in `OPENROUTER_API_KEY` (or in `~/.env`).
+The block example uses Kokoro, which runs offline.
 
 Kokoro setup, once, if `vo.py` cannot find it:
 
