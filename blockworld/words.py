@@ -110,6 +110,31 @@ def unswallow(script, times):
     return out
 
 
+def fit_tail(times, wav):
+    """Whisper sometimes stretches the last sentence past the end of the speech. If it did, squeeze the words after
+    the last pause into the real speech (from the end of that pause to where the sound stops)."""
+    import re, subprocess
+    out = subprocess.run(["ffmpeg", "-hide_banner", "-i", str(wav), "-af", "silencedetect=n=-38dB:d=0.06", "-f", "null",
+                          "-"], capture_output=True, text=True).stderr
+    starts = [float(x) for x in re.findall(r"silence_start: ([\d.]+)", out)]
+    ends = [float(x) for x in re.findall(r"silence_end: ([\d.]+)", out)]
+    dur = float(re.findall(r"Duration: (\d+):(\d+):([\d.]+)", out)[0][2]) + 60 * float(
+        re.findall(r"Duration: (\d+):(\d+):([\d.]+)", out)[0][1])
+    speech_end = starts[-1] if starts and (len(ends) < len(starts) or ends[-1] >= dur - 0.05) else dur
+    if times[-1][1] <= speech_end + 0.1:
+        return times
+    gaps = [e for e in ends if e < speech_end - 0.3]
+    if not gaps:
+        return times
+    g = gaps[-1]
+    j = min(range(len(times)), key=lambda i: abs(times[i][0] - g))
+    a, b = times[j][0], times[-1][1]
+    k = (speech_end - g) / (b - a)
+    fixed = list(times[:j]) + [(round(g + (t0 - a) * k, 3), round(g + (t1 - a) * k, 3), ok) for t0, t1, ok in times[j:]]
+    print(f"  re-timed the last {len(times) - j} words into the speech: they ran to {b:.2f} s, speech ends {speech_end:.2f} s")
+    return fixed
+
+
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         sys.exit(__doc__)
@@ -117,7 +142,7 @@ if __name__ == "__main__":
     script = (ep / "script.txt").read_text().split()
     vo = ep / "vo"
     heard = from_whisper_cpp_json(sys.argv[3]) if len(sys.argv) > 3 and sys.argv[2] == "--json" else transcribe(vo / "voice.wav", vo)
-    times = unswallow(script, align(script, heard))
+    times = fit_tail(unswallow(script, align(script, heard)), vo / "voice.wav")
     (vo / "times.json").write_text(json.dumps([{"w": w, "t0": t0, "t1": t1} for w, (t0, t1, _) in zip(script, times)], indent=0))
     loose = [(i, w, t[0]) for i, (w, t) in enumerate(zip(script, times)) if not t[2]]
     print(f"{len(script)} script words, {len(heard)} heard, {len(script) - len(loose)} matched exactly, {len(loose)} placed by guess")
