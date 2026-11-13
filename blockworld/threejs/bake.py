@@ -172,6 +172,36 @@ def emission_now():
     return out
 
 
+def focus_now():
+    """Where the lens focuses this frame and how strong the background blur is (0-1). The first character named in
+    focus(...) is the subject (else the first object or point). anim.dof(k) sets the strength; without it, close
+    subjects blur the background a lot and far ones not at all."""
+    import stillcheck
+    from mathutils import Vector
+    user = getattr(town, "DOF", None)
+    if user is not None and user <= 0:
+        return 0.0, 0.0
+    pt = None
+    for f in stillcheck.FOCUS:
+        if isinstance(f, dict) and "root" in f:
+            r = f["root"]
+            pt = Vector(r.matrix_world.translation) + Vector((0, 0, 4.6 * r.scale[2]))
+            break
+    if pt is None:
+        for f in stillcheck.FOCUS:
+            if hasattr(f, "matrix_world"):
+                pt = Vector(f.matrix_world.translation)
+                break
+            if isinstance(f, (tuple, list, Vector)) and len(f) == 3:
+                pt = Vector(f)
+                break
+    if pt is None:
+        return 0.0, 0.0
+    dist = (pt - Vector(town.cam.matrix_world.translation)).length
+    k = user if user is not None else max(0.0, min(1.0, 1.3 - dist / 13.0))
+    return dist, k
+
+
 def record():
     objs = S["objs"]
     S["mats"].append(np.array([np.array(o.matrix_world).T.reshape(16) for o in objs], dtype=np.float32))
@@ -179,8 +209,12 @@ def record():
     S["slots"].append([tuple(m.name if m else "" for m in o.data.materials) if o.type == "MESH" and o.data else ()
                        for o in objs])
     cam = town.cam
-    S["cam"].append({"m": [round(float(x), 6) for x in np.array(cam.matrix_world).T.reshape(16)],
-                     "fov": round(float(np.degrees(cam.data.angle)), 4)})
+    entry = {"m": [round(float(x), 6) for x in np.array(cam.matrix_world).T.reshape(16)],
+             "fov": round(float(np.degrees(cam.data.angle)), 4)}
+    fd, k = focus_now()
+    if k > 0:
+        entry["focus"], entry["dof"] = round(fd, 3), round(k, 3)
+    S["cam"].append(entry)
     sd = town.sun.data
     S["sun"].append({"m": [round(float(x), 6) for x in np.array(town.sun.matrix_world).T.reshape(16)],
                      "e": round(sd.energy, 4), "c": [round(x, 5) for x in sd.color]})

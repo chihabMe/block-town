@@ -57,6 +57,27 @@ def _characters(T, t):
             a = c["arm" + side].rotation_euler
             a.x += rad(-_s(T, 0.55, 5.0 * k, ph + (0 if side == "L" else 2.1)))
             a.y += rad(sgn * _s(T, 0.4, 2.0 * k, ph + 0.7))
+        _blink(c, T, t, ph)
+
+
+_HAS_BLINK = {}
+
+
+def _blink(c, T, t, ph):
+    """Blink: for 0.11 s every 2.4-5 s (each person on their own clock) the face swaps to its <name>_blink picture.
+    Only the Roblox-look faces drawn with open eyes have one (rlook_tex.py)."""
+    face = c.get("face_now")
+    if not face or c.get("look") != "roblox" or t < 0.25:
+        return
+    per = 2.4 + 2.6 * ((ph * 0.37) % 1.0)
+    if (T + ph * 1.7) % per > 0.11:
+        return
+    if face not in _HAS_BLINK:
+        import roblox
+        _HAS_BLINK[face] = (roblox.FACES / f"{face}_blink.png").exists()
+    cur = c["face"].data.materials[0]
+    if _HAS_BLINK[face] and not cur.name.startswith("ghost"):       # a see-through face stays as it is
+        c["face"].data.materials[0] = c["face_fn"](c["skin"], face + "_blink")
 
 
 def _camera(T, t, d):

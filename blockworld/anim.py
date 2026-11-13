@@ -35,7 +35,7 @@ __all__ = [
     "size", "feet", "card", "put", "over", "eyes", "closeup", "stand", "walk", "run", "math", "Vector",
     "wcut", "wpop", "before_each_frame", "focus",
     # action moves (ep09)
-    "sprint", "fall", "sit", "clap", "cheer", "gasp", "look_up", "drum", "juggle", "magic", "see_through",
+    "sprint", "fall", "sit", "clap", "cheer", "gasp", "look_up", "drum", "juggle", "magic", "see_through", "dof",
 ]
 
 ARGS = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
@@ -332,6 +332,12 @@ def magic(c, loc, yaw, face, T, k, ph=0.0):
     stand(c, loc, yaw, face, T, ph, armR=(mix(10, 170, k), 12), armL=(mix(5, 60, k), 30 * k), head=(-10 * k, 20 * k))
 
 
+def dof(k=1.0):
+    """Background blur for this shot (world v2 renderer): 0 = everything sharp, 1 = full blur. Without it, a shot that
+    calls focus(character) blurs by distance on its own: close-ups a lot, wide shots not at all."""
+    town.DOF = k
+
+
 _GHOST_UNDO = []          # (object, slot, material) and (object, None, hide_render) to put back at the next frame
 
 
@@ -423,6 +429,7 @@ def run(shots, end=None, tod="day"):
 
     def frame(T):
         town.NOW = T
+        town.DOF = None
         time_of_day(tod)
         for i, c in enumerate(town.CHARACTERS):
             size(c, c["scale"])

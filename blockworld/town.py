@@ -332,6 +332,7 @@ def pose(c, loc=None, yaw=0, face=None, armL=(0, 0), armR=(0, 0), legL=0, legR=0
     c["neck"].rotation_euler = (math.radians(-head[1]), 0, math.radians(head[0]))
     if face:
         c["face"].data.materials[0] = c.get("face_fn", face_mat)(c["skin"], face)
+        c["face_now"] = face
 
 
 # ---------------------------------------------------------------- the town
@@ -366,6 +367,9 @@ def ground():
             box((WALK_W - 0.5, 0.12, 0.02), (x + sx * 0.25, -200 + i, WALK_H + 0.005), mat("#A9ACB5"))
 
 
+PAL2 = [("#F4D06F", "#DDB650"), ("#8CC7E8", "#72B0D4"), ("#F2A0A0", "#DC8686"), ("#A8DDB5", "#8EC89C"),
+        ("#D4B5EC", "#BC9BD9"), ("#F7C59F", "#E1AB82"), ("#F1EEE4", "#D9D5C7")]      # world v2: bright house colours
+ROOFS2 = ["#B5523B", "#3F5873", "#4E6B50", "#6B4A3A", "#34363F"]
 HOUSES = []          # every house: {"x", "y", "win"} (its own window material, so its lights can go off alone)
 WIN_K = 1.0          # the current mood's window glow
 
@@ -373,7 +377,7 @@ WIN_K = 1.0          # the current mood's window glow
 def house(x, y, colour, dark, w=24, d=18, h=15, roof_h=8, roof="#22232B", door="#3A1E14"):
     r = empty("house", (x, y, 0), yaw=-90 if x > 0 else 90)      # the door faces the road
     WIN = mat("#F7CE6E", emit=1.0, key=("window", x, y))           # this house's windows (window_light)
-    HOUSES.append({"x": x, "y": y, "win": WIN})
+    HOUSES.append({"x": x, "y": y, "win": WIN, "root": r, "h": h, "roof_h": roof_h, "roof": roof})
     wall = banded(colour, dark)
     box((w, d, h), (0, 0, h / 2), wall, r)
     box((w + 0.6, d + 0.6, 0.7), (0, 0, 0.35), mat("#8A8D96"), r)                       # foundation
@@ -400,8 +404,12 @@ def house(x, y, colour, dark, w=24, d=18, h=15, roof_h=8, roof="#22232B", door="
     return r
 
 
+SHOPS = []           # every shop's root (world2 dresses them)
+
+
 def shop(x, y, sign, w=26, d=18, h=14):
     r = empty("shop", (x, y, 0), yaw=-90 if x > 0 else 90)
+    SHOPS.append(r)
     box((w, d, h), (0, 0, h / 2), brick(), r)
     box((w + 1.2, d + 1.2, 1.0), (0, 0, h + 0.5), DARK, r)
     fy = -d / 2
@@ -505,7 +513,7 @@ _BUILT = False
 
 
 def build_town(rule_big, shop_signs=("CORNER SHOP", "BAKERY"), rule_title="TOWN RULE", hall_sign="TOWN HALL",
-               clock="8:00", shop_spots=((1, 30), (-1, 90)), style="block"):
+               clock="8:00", shop_spots=((1, 30), (-1, 90)), style="block", detail=True):
     """Put up the street. Call once per episode, before any shot.
 
     rule_big    the rule in 3-5 words for the billboard, e.g. "1 LIE = 1 INCH"
@@ -514,6 +522,9 @@ def build_town(rule_big, shop_signs=("CORNER SHOP", "BAKERY"), rule_title="TOWN 
     The billboard stands on the roof of the first shop, angled toward a camera coming down the street.
     style       "block" (the original look) or "roblox" (round heads, printed clothes, plastic, fog and rain moods:
                 see roblox.py and docs/ROBLOX_LOOK.md)
+    detail      Roblox look only: the dressed town of world v2 (bright houses with frames, shutters, porches and
+                chimneys, gardens and fences, street furniture, parked cars, hills, more trees and clouds: world2.py).
+                detail=False gives the plain v1 street.
     """
     global _BUILT, TOD
     if _BUILT:
@@ -527,8 +538,12 @@ def build_town(rule_big, shop_signs=("CORNER SHOP", "BAKERY"), rule_title="TOWN 
             if (sx, y) in shop_spots:
                 shop(x, y, shop_signs[shop_spots.index((sx, y))])
             else:
-                c, dk = PAL[k % len(PAL)]
-                house(x, y, c, dk, roof_h=7 + (k % 3))
+                if detail and style == "roblox":
+                    c, dk = PAL2[k % len(PAL2)]
+                    house(x, y, c, dk, roof_h=7 + (k % 3), roof=ROOFS2[(k * 2 + (sx > 0)) % len(ROOFS2)])
+                else:
+                    c, dk = PAL[k % len(PAL)]
+                    house(x, y, c, dk, roof_h=7 + (k % 3))
             k += 1
             tree(sx * (ROAD_W / 2 + WALK_W + 2.6), y + 15, 0.8 + 0.15 * (k % 3), seed=k)
             lamp(sx * (ROAD_W / 2 + 1.6), y + 15)
@@ -540,7 +555,10 @@ def build_town(rule_big, shop_signs=("CORNER SHOP", "BAKERY"), rule_title="TOWN 
     STYLE = style
     if style == "roblox":
         import roblox
-        roblox.apply()
+        roblox.apply(detail)
+        if detail:
+            import world2
+            world2.dress(shop_spots)
     elif style != "block":
         raise ValueError(f"style must be 'block' or 'roblox', not {style!r}")
     TOD = None
@@ -650,17 +668,26 @@ key = bpy.data.objects.new("key", key_d)
 COL.objects.link(key)
 
 
-def shot(pos, target, fov, side=0.55, key_w=0, key_col="#FFC98A"):
+DOF = None            # anim.dof(k) sets it for one frame: the background blur of the world v2 renderer
+
+
+def shot(pos, target, fov, side=0.55, key_w=0, key_col="#FFC98A", roll=0):
     """Aim the camera from pos at target with a VERTICAL field of view of fov degrees.
 
     The sun is brought from behind the camera's left, so faces are lit from any angle.
     key_w > 0 switches on a lamp that rides with the camera (night: 420 for a close-up, 900 for a group).
+    roll tilts the frame (degrees), for a dutch angle.
     """
     cam.location = pos
     look = Vector(target) - Vector(pos)
-    cam.rotation_euler = look.to_track_quat("-Z", "Y").to_euler()
+    q = look.to_track_quat("-Z", "Y")
+    if roll:                                          # a tilted ("dutch") frame: roll degrees around the view axis
+        from mathutils import Quaternion
+        q = q @ Quaternion((0, 0, 1), math.radians(roll))
+    cam.rotation_euler = q.to_euler()
     cam_d.angle = math.radians(fov)
-    fwd = Vector((look.x, look.y, 0)).normalized()
+    fwd = Vector((look.x, look.y, 0))
+    fwd = fwd.normalized() if fwd.length > 1e-4 else Vector((0, 1, 0))      # looking straight down
     left = Vector((-fwd.y, fwd.x, 0))
     ray = fwd * 0.8 - left * -side - Vector((0, 0, math.tan(math.radians(ELEV))))
     sun.rotation_euler = ray.to_track_quat("-Z", "Y").to_euler()
