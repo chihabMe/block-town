@@ -20,7 +20,8 @@ sys.path.insert(0, str(BW))
 import town  # noqa: E402
 
 ARGS = sys.argv[sys.argv.index("--") + 1:]
-F0, F1 = int(ARGS[2]), int(ARGS[3])
+F0 = int(ARGS[2]) if len(ARGS) > 2 else 0
+F1 = int(ARGS[3]) if len(ARGS) > 3 else None       # None: to the end of the episode
 OUT = Path(os.environ.get("BT_TJ_OUT") or Path(ARGS[0]).resolve() / "threejs")
 OUT.mkdir(parents=True, exist_ok=True)
 REF = os.environ.get("BT_TJ_REF") == "1"
@@ -110,6 +111,7 @@ def plastic():
 
 def setup():
     """First frame: ids, overlay flags, geometry export, lamp list."""
+    town.tick("episode built (props, extra characters, first frame posed)")
     plastic()
     objs = [o for o in bpy.context.scene.objects if o.type in ("MESH", "FONT", "CURVE")]
     for i, o in enumerate(objs):
@@ -146,6 +148,7 @@ def setup():
     S["objs"] = objs
     S["overlay"] = overlay
     S["lamps"] = [o for o in bpy.context.scene.objects if o.type == "LIGHT" and o.data in town.LAMPS]
+    town.tick("export scene.glb")
 
 
 def write_materials():
@@ -228,6 +231,8 @@ def record():
 
 
 def finish():
+    S["done"] = True
+    town.tick(f"record {len(S['mats'])} frames (pose + record)")
     write_materials()
     objs = S["objs"]
     M = np.stack(S["mats"]); V = np.stack(S["vis"])
@@ -243,7 +248,7 @@ def finish():
         vals = [e.get(nm, 0.0) for e in S["emit"]]
         if max(vals) - min(vals) > 1e-4:
             emit[nm] = vals
-    out = {"f0": F0, "f1": F1, "fps": getattr(sys.modules.get("anim"), "FPS", 30), "frames": n,
+    out = {"f0": F0, "f1": F0 + n - 1, "fps": getattr(sys.modules.get("anim"), "FPS", 30), "frames": n,
            "static": {str(objs[i]["hid"]): {"m": [round(float(x), 5) for x in M[0, i]], "v": bool(V[0, i])}
                       for i in range(len(objs))},
            "dynamic": [{"hid": objs[i]["hid"], "v": [int(x) for x in V[:, i]],
@@ -252,6 +257,7 @@ def finish():
     (OUT / "anim.json").write_text(json.dumps(out, separators=(",", ":")))
     print(f"TJ anim: {n} frames, {len(objs)} objects, {len(dyn)} dynamic, {len(emit)} glowing materials change, "
           f"bake per frame mean {np.mean(S['times'][1:]) * 1000:.1f} ms", flush=True)
+    town.tick("write materials + anim")
 
 
 def render_still(path):
@@ -264,9 +270,11 @@ def render_still(path):
     f = int(re.search(r"f_(\d+)", str(path)).group(1))
     if REF:
         _orig_render(path)
-    if f == F1:
+    if F1 is not None and f == F1:
         finish()
 
 
 town.render_still = render_still
 runpy.run_path(str(BW / "run.py"), run_name="__main__")
+if S["objs"] is not None and not S.get("done"):
+    finish()

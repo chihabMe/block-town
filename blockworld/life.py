@@ -77,7 +77,9 @@ def _blink(c, T, t, ph):
         _HAS_BLINK[face] = (roblox.FACES / f"{face}_blink.png").exists()
     cur = c["face"].data.materials[0]
     if _HAS_BLINK[face] and not cur.name.startswith("ghost"):       # a see-through face stays as it is
-        c["face"].data.materials[0] = c["face_fn"](c["skin"], face + "_blink")
+        m = c["face_fn"](c["skin"], face + "_blink")
+        if cur != m:
+            c["face"].data.materials[0] = m
 
 
 def _camera(T, t, d):

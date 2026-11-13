@@ -7,11 +7,22 @@ Units are studs. 1 stud = 1 foot in on-screen tags. A normal adult is 5.3 studs 
 Map: the street runs along Y ("down the street" = +Y, toward the town hall at y = 190).
      road x = -12..12 (top z = 0.1) | sidewalks x = 12..21 both sides (top z = 0.5) | lawns 21..27 | house fronts at 27.
 """
-import math, random
+import math, random, time
 from pathlib import Path
 
 import bpy
-from mathutils import Vector
+from mathutils import Matrix, Vector
+
+_T0 = time.perf_counter()
+_TL = [_T0]
+
+
+def tick(label):
+    """Print how long the last build step took ("TJ time <label> <step s> (<total s>)"), for the render log."""
+    now = time.perf_counter()
+    print(f"TJ time {label} {now - _TL[0]:.1f}s ({now - _T0:.1f}s)", flush=True)
+    _TL[0] = now
+
 
 KIT = Path(__file__).resolve().parent
 FONT = str(KIT / "fonts" / "DejaVuSans-Bold.ttf")
@@ -152,10 +163,47 @@ def box(size, loc, material, parent=None, rot=(0, 0, 0), name="part"):
     return o
 
 
+_TEMPL = {}
+_PRIM_NAME = {"uv_sphere": "Sphere", "cone": "Cone", "cylinder": "Cylinder", "ico_sphere": "Icosphere"}
+
+
+def prim(kind, location=None, **kw):
+    """A new object with a primitive mesh, like bpy.ops.mesh.primitive_<kind>_add(**kw) but fast: one unit-size template
+    per shape is made with bpy.ops, and every object gets a scaled copy of its mesh. (bpy.ops gets slower with every
+    object already in the scene: a 32-person crowd took 90 s next to the street.)"""
+    kw = dict(kw)
+    if kind in ("uv_sphere", "ico_sphere"):
+        r = kw.pop("radius", 1.0)
+        size = (r, r, r)
+    elif kind == "cylinder":
+        r, d = kw.pop("radius", 1.0), kw.pop("depth", 2.0)
+        size, kw["depth"] = (r, r, d), 1.0
+    elif kind == "cone":
+        r1, r2, d = kw.pop("radius1", 1.0), kw.pop("radius2", 0.0), kw.pop("depth", 2.0)
+        size, kw["depth"], kw["radius2"] = (r1, r1, d), 1.0, round(r2 / r1, 6) if r1 else 0.0
+    else:
+        raise ValueError(f"prim: unknown kind {kind!r}")
+    key = (kind, tuple(sorted(kw.items())))
+    me = _TEMPL.get(key)
+    if me is None:
+        getattr(bpy.ops.mesh, f"primitive_{kind}_add")(**kw)
+        t = bpy.context.object
+        me = t.data
+        me.use_fake_user = True
+        bpy.data.objects.remove(t)
+        _TEMPL[key] = me
+    m = me.copy()
+    m.transform(Matrix.Diagonal((*size, 1.0)))
+    o = bpy.data.objects.new(_PRIM_NAME[kind], m)
+    if location is not None:
+        o.location = location
+    COL.objects.link(o)
+    return o
+
+
 def cylinder(radius, depth, loc, material, parent=None, rot=(0, 0, 0), vertices=14):
     """A cylinder along its own Z. Only for wheels and other things a box cannot be."""
-    bpy.ops.mesh.primitive_cylinder_add(vertices=vertices, radius=radius, depth=depth)
-    o = bpy.context.object
+    o = prim("cylinder", vertices=vertices, radius=radius, depth=depth)
     o.data.materials.append(material)
     o.location = loc
     o.rotation_euler = [math.radians(a) for a in rot]
@@ -331,7 +379,9 @@ def pose(c, loc=None, yaw=0, face=None, armL=(0, 0), armR=(0, 0), legL=0, legR=0
     c["legR"].rotation_euler = (math.radians(-legR), 0, 0)
     c["neck"].rotation_euler = (math.radians(-head[1]), 0, math.radians(head[0]))
     if face:
-        c["face"].data.materials[0] = c.get("face_fn", face_mat)(c["skin"], face)
+        m = c.get("face_fn", face_mat)(c["skin"], face)
+        if c["face"].data.materials[0] != m:    # only on a real change: a new material makes Blender rebuild the
+            c["face"].data.materials[0] = m     # rounded head mesh (~15 ms a character per frame)
         c["face_now"] = face
 
 
@@ -409,13 +459,15 @@ SHOPS = []           # every shop's root (world2 dresses them)
 
 def shop(x, y, sign, w=26, d=18, h=14):
     r = empty("shop", (x, y, 0), yaw=-90 if x > 0 else 90)
+    r["bt_shop"] = [w, d, h]
     SHOPS.append(r)
     box((w, d, h), (0, 0, h / 2), brick(), r)
     box((w + 1.2, d + 1.2, 1.0), (0, 0, h + 0.5), DARK, r)
     fy = -d / 2
     box((w - 3, 0.5, 3.4), (0, fy - 0.5, h - 2.6), mat("#1B1F3A"), r)                    # sign board
     box((w - 2.6, 0.3, 3.8), (0, fy - 0.35, h - 2.6), mat("#F5C52A"), r)                 # gold frame
-    text(sign, 2.0, (0, fy - 0.78, h - 2.7), sign_mat(), r, extrude=0.06, max_w=w - 5)
+    if sign is not None:
+        shop_sign(r, sign)
     for sx in (-1, 1):
         box((7.5, 0.3, 6.0), (sx * 7.2, fy - 0.05, 5.0), mat("#9FD8F2", emit=0.25, key="glass"), r)
         box((8.1, 0.5, 0.4), (sx * 7.2, fy - 0.15, 1.9), mat("#E9E2D6"), r)
@@ -426,6 +478,12 @@ def shop(x, y, sign, w=26, d=18, h=14):
     return r
 
 
+def shop_sign(r, sign):
+    """The words on a shop's sign board (kept apart so a saved street can get new shop names per episode)."""
+    w, d, h = r["bt_shop"]
+    return text(sign, 2.0, (0, -d / 2 - 0.78, h - 2.7), sign_mat(), r, extrude=0.06, max_w=w - 5)
+
+
 def billboard(x, y, z, title, big, yaw=0):
     """A lit billboard on two posts: a small title line, a big line, and a ruler strip. It faces its local -Y."""
     r = empty("billboard", (x, y, z), yaw=yaw)
@@ -433,12 +491,25 @@ def billboard(x, y, z, title, big, yaw=0):
         box((0.7, 0.7, 12), (sx * 6, 0.4, 6), mat("#16171C"), r)
     box((19.6, 0.5, 10.6), (0, 0, 15), mat("#F5C52A"), r)
     box((18.8, 0.5, 9.8), (0, -0.12, 15), mat("#1B1F3A"), r)
-    text(title, 1.5, (0, -0.42, 17.6), mat("#FFFFFF", emit=1.5, key="bbwhite"), r, extrude=0.05, max_w=17.6)
-    text(big, 2.9, (0, -0.42, 14.2), sign_mat(), r, extrude=0.06, max_w=17.6)
+    r["bt_billboard"] = True
+    if big is not None:
+        billboard_text(r, title, big)
     box((16, 0.2, 0.9), (0, -0.42, 11.4), mat("#FFFFFF", emit=1.0, key="bbruler"), r)
     for i in range(17):
         box((0.14, 0.24, 0.6 if i % 4 else 0.9), (-8 + i, -0.46, 11.4), mat("#E94B5B", emit=1.5, key="bbtick"), r)
     return r
+
+
+def billboard_text(r, title, big):
+    text(title, 1.5, (0, -0.42, 17.6), mat("#FFFFFF", emit=1.5, key="bbwhite"), r, extrude=0.05, max_w=17.6)
+    text(big, 2.9, (0, -0.42, 14.2), sign_mat(), r, extrude=0.06, max_w=17.6)
+
+
+def hall_text(r, sign, clock):
+    """The town hall's name and its clock face."""
+    h = 30
+    text(sign, 3.4, (0, -9.2, h + 1.8), sign_mat(), r, extrude=0.1, max_w=70)
+    text(clock, 3.2, (0, -0.6, h - 7), mat("#FF3B30", emit=4.0, key="clock"), r, extrude=0.05, max_w=11)
 
 
 def town_hall(y, sign="TOWN HALL", clock="8:00"):
@@ -451,10 +522,11 @@ def town_hall(y, sign="TOWN HALL", clock="8:00"):
         box((3.0, 3.0, h - 3.6), (-30 + i * 12, -4.2, 3.6 + (h - 3.6) / 2), mat("#F1F1F4"), r)
     box((w + 8, d + 12, 3.6), (0, d / 2 - 3, h + 1.8), mat("#C9B37C"), r)
     box((w - 6, d, 3), (0, d / 2, h + 5), mat("#B49E69"), r)
-    text(sign, 3.4, (0, -9.2, h + 1.8), sign_mat(), r, extrude=0.1, max_w=70)
+    r["bt_townhall"] = True
     box((13, 0.6, 5.2), (0, -0.2, h - 7), mat("#14151A"), r)
-    text(clock, 3.2, (0, -0.6, h - 7), mat("#FF3B30", emit=4.0, key="clock"), r, extrude=0.05, max_w=11)
     box((11, 0.5, 15), (0, -0.1, 11.1), mat("#2A2C45"), r)
+    if sign is not None:
+        hall_text(r, sign, clock)
     return r
 
 
@@ -463,8 +535,7 @@ def tree(x, y, s=1.0, seed=0):
     r = empty("tree", (x, y, 0))
     box((1.2 * s, 1.2 * s, 6 * s), (0, 0, 3 * s), mat("#5A3A22"), r)
     for i, (dx, dy, dz, rad) in enumerate(((0, 0, 8.4, 3.6), (1.9, 0.6, 7.2, 2.6), (-1.7, -0.8, 7.0, 2.7))):
-        bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=2, radius=rad * s)
-        o = bpy.context.object
+        o = prim("ico_sphere", subdivisions=2, radius=rad * s)
         for vtx in o.data.vertices:
             vtx.co *= rng.uniform(0.86, 1.14)
         o.data.materials.append(mat(("#3FA338", "#4DB542", "#368E31")[i]))
@@ -485,6 +556,7 @@ def lamp(x, y):
     li.spot_size = math.radians(118)
     li.spot_blend = 0.5
     li.shadow_soft_size = 0.6
+    li["bt_lamp"] = True
     lo = bpy.data.objects.new("lampL", li)
     lo.location = (sx * 3.6, 0, 12.2)
     lo.parent = r
@@ -500,8 +572,7 @@ def clouds():
     for cx, cy, cz, s in ((-90, 330, 120, 1.0), (60, 360, 150, 1.3), (150, 300, 105, 0.9), (-170, 380, 165, 1.2),
                           (10, 420, 200, 1.5), (-40, 300, 90, 0.7)):
         for i in range(6):
-            bpy.ops.mesh.primitive_uv_sphere_add(segments=16, ring_count=8, radius=rng.uniform(10, 17) * s)
-            o = bpy.context.object
+            o = prim("uv_sphere", segments=16, ring_count=8, radius=rng.uniform(10, 17) * s)
             o.location = (cx + (i - 2.5) * 12 * s, cy, cz + rng.uniform(-3, 5) * s)
             o.scale = (1, 0.3, 0.8)
             o.data.materials.append(m)
@@ -510,6 +581,25 @@ def clouds():
 
 
 _BUILT = False
+_LOOK = None
+
+
+def use_look(style="roblox", detail=True):
+    """Switch the episode's look on once: "roblox" (round heads, printed clothes, plastic; detail = world v2 prints) or
+    "block". build_town() and place() call it, so an episode set only indoors still gets the Roblox look."""
+    global STYLE, _LOOK
+    if _LOOK is not None:
+        if _LOOK != (style, bool(detail)):
+            raise RuntimeError(f"the look is already {_LOOK}; call build_town(style=...) before any place(...)")
+        return
+    if style not in ("block", "roblox"):
+        raise ValueError(f"style must be 'block' or 'roblox', not {style!r}")
+    _LOOK = (style, bool(detail))
+    STYLE = style
+    if style == "roblox":
+        import roblox
+        roblox.apply(detail)
+        tick("roblox.apply (cast restyle)")
 
 
 def build_town(rule_big, shop_signs=("CORNER SHOP", "BAKERY"), rule_title="TOWN RULE", hall_sign="TOWN HALL",
@@ -530,37 +620,11 @@ def build_town(rule_big, shop_signs=("CORNER SHOP", "BAKERY"), rule_title="TOWN 
     if _BUILT:
         raise RuntimeError("build_town() was already called")
     _BUILT = True
-    ground()
-    k = 0
-    for sx in (-1, 1):
-        for y in HOUSE_Y:
-            x = sx * (ROAD_W / 2 + WALK_W + 6 + 9)
-            if (sx, y) in shop_spots:
-                shop(x, y, shop_signs[shop_spots.index((sx, y))])
-            else:
-                if detail and style == "roblox":
-                    c, dk = PAL2[k % len(PAL2)]
-                    house(x, y, c, dk, roof_h=7 + (k % 3), roof=ROOFS2[(k * 2 + (sx > 0)) % len(ROOFS2)])
-                else:
-                    c, dk = PAL[k % len(PAL)]
-                    house(x, y, c, dk, roof_h=7 + (k % 3))
-            k += 1
-            tree(sx * (ROAD_W / 2 + WALK_W + 2.6), y + 15, 0.8 + 0.15 * (k % 3), seed=k)
-            lamp(sx * (ROAD_W / 2 + 1.6), y + 15)
-    town_hall(190, hall_sign, clock)
-    bs, by = shop_spots[0]
-    billboard(bs * 31, by, 14, rule_title, rule_big, yaw=bs * (-90 + 22))
-    clouds()
-    global STYLE
-    STYLE = style
-    if style == "roblox":
-        import roblox
-        roblox.apply(detail)
-        if detail:
-            import world2
-            world2.dress(shop_spots)
-    elif style != "block":
-        raise ValueError(f"style must be 'block' or 'roblox', not {style!r}")
+    tick("before build_town (episode start)")
+    use_look(style, detail)
+    import places                                   # the street is a saved place (places/street.py)
+    places.place("street", shop_spots=[list(s) for s in shop_spots], style=style, detail=bool(detail and style == "roblox"),
+                 rule_big=rule_big, shop_signs=tuple(shop_signs), rule_title=rule_title, hall_sign=hall_sign, clock=clock)
     TOD = None
     time_of_day("day")
 
@@ -728,3 +792,6 @@ def render_still(path):
         h()
     scene.render.filepath = str(path)
     bpy.ops.render.render(write_still=True)
+
+
+tick("town import (8 characters, sky, camera)")

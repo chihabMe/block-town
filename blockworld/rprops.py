@@ -474,44 +474,14 @@ def ice_cream_truck(x, y, yaw=0, lit=True):
 
 # ---------------------------------------------------------------- a bedroom set and a dog (ep07)
 def bedroom(x, y, wall="#5C6B94", blanket="#E8A33C"):
-    """A small bedroom built far from the street (park it at y = -460, 60 studs apart). Faces -Y: film it from
-    (x, y - 13, 5) or closer. Returns a dict:
+    """A small bedroom from the world library (places/bedroom.py), parked at (x, y), e.g. y = -460, 60 studs apart.
+    Faces -Y: film it from (x, y - 13, 5) or closer. Returns the place, which is also a dict:
         seat      where a character sits up in bed: stand(c, room["seat"], 0, face, T, legL=90, legR=90)
         tuck(k)   pulls the blanket up: 0 = at the waist, 1 = up to the nose (call it inside the shot)
         stand     the nightstand top, for phone_on_ground(..., z=room["stand"][2])
         lamp      the bedside light (its glow strength: T.emission(room["lamp"], k))"""
-    r = T.empty("bedroom", (x, y, 0))
-    floor_m, wall_m = plastic("#8A6A4F", 0.6), plastic(wall, 0.7)
-    rbox((22, 16, 0.4), (0, 0, -0.2), floor_m, r, bv=0.05)
-    rbox((22, 0.6, 14), (0, 8, 7), wall_m, r, bv=0.05)                                      # back wall
-    rbox((0.6, 16, 14), (-11, 0, 7), wall_m, r, bv=0.05)                                    # left wall
-    rbox((5.2, 0.4, 4.6), (5.5, 7.65, 8.4), glow("#1B2A5C", 1.0), r, bv=0.05)               # night window
-    for fx, fz, sx, sz in ((5.5, 10.85, 5.8, 0.3), (5.5, 5.95, 5.8, 0.3), (2.75, 8.4, 0.3, 5.2), (8.25, 8.4, 0.3, 5.2),
-                           (5.5, 8.4, 0.2, 4.6)):
-        rbox((sx, 0.5, sz), (fx, 7.5, fz), plastic("#EDEDF0", 0.5), r, bv=0.03)
-    blob((0.3, 0.3, 0.3), (3.6, 7.3, 9.8), glow("#FFF6D8", 2.0), r)                        # the moon in the window
-    wood = plastic("#6B4A33", 0.5)
-    rbox((6.4, 10.5, 1.4), (-4.5, 2.6, 0.9), wood, r, bv=0.15)                              # bed frame
-    rbox((6.8, 0.5, 4.2), (-4.5, 7.75, 2.1), wood, r, bv=0.15)                              # headboard
-    rbox((6.0, 10.0, 0.9), (-4.5, 2.6, 2.0), plastic("#F2F2F4", 0.6), r, bv=0.25)           # mattress
-    rbox((3.6, 1.6, 0.9), (-4.5, 6.6, 2.75), plastic("#FFFFFF", 0.6), r, bv=0.35)           # pillow
-    bl = plastic(blanket, 0.7)
-    rbox((6.4, 6.8, 0.6), (-4.5, 0.8, 2.6), bl, r, bv=0.25)                                 # blanket over the legs
-    flap = T.empty("bedroom.flap", (-4.5, 3.6, 2.6), r)                                     # the part pulled up
-    rbox((5.2, 0.7, 1.0), (0, 0, 0.5), bl, flap, bv=0.25)
-    rbox((2.6, 2.4, 2.8), (1.4, 6.4, 1.4), wood, r, bv=0.15)                                # nightstand
-    lamp_m = T.mat("#FFC56B", emit=1.0, key=("bedlamp", x, y))
-    rbox((0.3, 0.3, 1.2), (2.2, 6.9, 3.4), plastic("#2A2C33", 0.4), r, bv=0.03)
-    rbox((1.2, 1.2, 0.9), (2.2, 6.9, 4.3), lamp_m, r, bv=0.2)
-    rbox((8, 5, 0.06), (-2, -3.5, 0.02), plastic("#B5463E", 0.8), r, bv=0)                  # rug
-    T.emission(lamp_m, 0.0)
-
-    def tuck(k):
-        """0 = blanket at the waist, 1 = pulled up to the nose (in front of a sitting character's face)."""
-        flap.scale = (1, 1, 1 + 1.3 * k)
-    tuck(0)
-    anim.before_each_frame(lambda Tm: tuck(0))
-    return {"root": r, "seat": (x - 4.5, y + 4.6, 0.5), "tuck": tuck, "stand": (x + 1.4, y + 6.4, 2.8), "lamp": lamp_m}
+    import places
+    return places.place("bedroom", x=x, y=y, wall=wall, blanket=blanket)
 
 
 def dog(x, y, z=0.0, yaw=0, coat="#C9894B", ears="#7A4A2C"):
@@ -860,100 +830,14 @@ def rabbit(parent=None, loc=(0, 0, 0)):
 
 
 def school_hall(x, y, banner="TALENT SHOW", rows=4, per_row=8, crowd=True):
-    """The school hall, built far from the street (park it at y = -560 or further). The audience faces +Y, toward a
-    stage at the back with red curtains, a banner and a spotlight. Returns a dict:
+    """The school hall from the world library (places/school_hall.py), parked at (x, y) (y = -560 or further). The
+    audience faces +Y, toward a stage at the back with red curtains, a banner and a spotlight. Returns the place, which
+    is also a dict:
         stage     the middle of the stage floor (x, y, z): stand a performer there
-        spot      the spotlight's floor circle (show or hide with hall["light"](on))
+        light(on) shows or hides the spotlight's floor circle and beam
         seats     every seat (x, y, z) in the audience, front row first, for sit(...) or crowd()
         cam_back  a camera spot at the back of the hall looking at the stage (a wide)
-    crowd=True fills every seat with a random audience member (hall["crowd"]: their character dicts)."""
-    import random as _r
-    r = T.empty("hall", (x, y, 0))
-    floor_m, wall_m = plastic("#B07A4A", 0.55), plastic("#3B3F70", 0.75)
-    rbox((64, 80, 0.4), (0, 10, -0.2), floor_m, r, bv=0.05)
-    for sx in (-1, 1):
-        rbox((0.8, 80, 26), (sx * 32, 10, 13), wall_m, r, bv=0.05)                               # side walls
-        for wy in (-14, 6, 26):
-            rbox((0.2, 6, 10), (sx * 31.5, wy, 14), glow("#9FD8FF", 0.6), r, bv=0.05)           # tall windows
-    rbox((64, 0.8, 26), (0, 50, 13), wall_m, r, bv=0.05)                                         # back wall
-    ceil = rbox((64, 80, 0.6), (0, 10, 26.3), plastic("#2A2E52", 0.8), r, bv=0.05)                # ceiling (no shadow:
-    ceil.visible_shadow = False                                                                   # the sun still lights
-    for cy in (-20, 0, 20):                                                                       # the room)
-        rbox((50, 1.2, 0.4), (0, cy, 25.8), glow("#FFF1D0", 1.4), r, bv=0.1)                    # strip lights
-    wood, red, gold = plastic("#7A4A2C", 0.45), plastic("#B0182A", 0.65), plastic("#E8B23A", 0.3)
-    rbox((40, 14, 3.0), (0, 42, 1.5), wood, r, bv=0.1)                                           # the stage
-    rbox((40.4, 0.4, 0.5), (0, 35, 3.0), gold, r, bv=0.05)                                       # stage lip
-    for i in range(3):                                                                            # steps
-        rbox((6, 1.2, 1.0 * (i + 1)), (-14, 34.4 - 1.2 * (2 - i), 0.5 * (i + 1)), wood, r, bv=0.05)
-    for sx in (-1, 1):                                                                            # curtains in folds
-        for k in range(7):
-            rbox((1.3, 1.0, 21), (sx * (19.5 - k * 1.2), 36.5 + (k % 2) * 0.5, 13.5), red, r, bv=0.3)
-    for k in range(32):                                                                           # the valance on top
-        rbox((1.3, 1.0, 4.0), (-19.4 + k * 1.25, 36.0 + (k % 2) * 0.4, 22.5), red, r, bv=0.3)
-    rbox((41, 0.6, 0.6), (0, 35.6, 20.5), gold, r, bv=0.05)
-    rbox((40, 0.4, 20), (0, 48.5, 13), plastic("#5A1420", 0.7), r, bv=0.05)                     # back curtain
-    rbox((22, 0.3, 3.6), (0, 47.9, 17.5), plastic("#FFF4D6", 0.5), r, bv=0.1)                   # the banner
-    T.text(banner, 2.2, (0, 47.7, 17.5), plastic("#D62B2B", 0.4, key="hallink"), r, extrude=0.03, max_w=20)
-    for bx in (-11, 11):                                                                          # paper stars
-        blob((0.9, 0.2, 0.9), (bx + 1.5, 47.7, 17.5), glow("#FFD23A", 1.2), r)
-    spot_m = T.mat("#FFF3C4", emit=1.0, key=("spot", x, y))
-    spot = disc(4.6, 0.06, (0, 42, 3.05), spot_m, r, rot=(0, 0, 0), bv=0, verts=48)            # the light pool
-    beam_m = T.mat("#FFF3C4", emit=0.6, key=("spotbeam", x, y))
-    beam_m.node_tree.nodes["Principled BSDF"].inputs["Alpha"].default_value = 0.07
-    beam_m.surface_render_method = "BLENDED"
-    bpy.ops.mesh.primitive_cone_add(vertices=40, radius1=4.6, radius2=0.8, depth=22)
-    bm = bpy.context.object
-    bm.data.materials.append(beam_m)
-    bm.location = (0, 42, 14)
-    bm.parent = r
-    bm.visible_shadow = False
-    bm["no_shadow"] = True
-    lamp = rbox((1.6, 2.4, 1.6), (0, 42, 25.5), plastic("#2A2C33", 0.4), r, bv=0.2)
-
-    def light(on=True):
-        spot.hide_render = bm.hide_render = not on
-    seats = []
-    chair = plastic("#2F3348", 0.5)
-    for row in range(rows):
-        sy = 22 - row * 6.5
-        for k in range(per_row):
-            sx = (k - (per_row - 1) / 2) * 5.0 + (2.5 if k >= per_row / 2 else -2.5)          # an aisle in the middle
-            rbox((3.0, 2.6, 0.5), (sx, sy, 1.9), chair, r, bv=0.1)
-            rbox((3.0, 0.5, 3.0), (sx, sy - 1.4, 3.2), chair, r, bv=0.1)              # the back (behind them)
-            for lx in (-1.2, 1.2):
-                rbox((0.25, 0.25, 1.7), (sx + lx, sy, 0.85), chair, r, bv=0.03)
-            seats.append((x + sx, y + sy - 0.5, 0.0))
-    out = {"root": r, "stage": (x, y + 42, 3.0), "light": light, "seats": seats,
-           "cam_back": ((x, y - 26, 12.0), (x, y + 40, 7.0))}
-    if crowd:
-        rng = _r.Random(9)
-        shirts = ["#2FB5A8", "#F28A1E", "#8A4FB5", "#E23B3B", "#2F6FE0", "#3BB54A", "#FFC533", "#E88BA8", "#5A606B",
-                  "#00A3C4", "#C24E8A", "#7A9A2C"]
-        skins = ["#F0C8A0", "#C98A5A", "#9A5B34", "#E4B58A", "#7A4A2C", "#EBC8A8", "#B97A4A"]
-        hairs = ["black", "brown", "dark", "ginger", "blond"]
-        styles = ["tuft", "side", "long", "bun", "pig", "curl"]
-        people = []
-        for i, s in enumerate(seats):
-            p = T.character(f"Crowd{i}", rng.choice(skins), rng.choice(shirts), rng.choice(["#2B3350", "#3A3A46", "#31406B", "#22222A"]),
-                            rng.choice(styles), rng.choice(hairs), seed=100 + i, scale=rng.choice([0.8, 0.9, 1.0]))
-            people.append(p)
-        out["crowd"] = people
-
-        def fill(Tm, mood="sit", k=1.0, skip=(), turn=0.0):
-            """Seat the whole audience for this frame (they face the stage). mood: "sit", "clap", "cheer", "gasp".
-            turn > 0 turns every head toward +X by that many degrees (a crowd looking at someone in the aisle)."""
-            for i, (c, st) in enumerate(zip(people, seats)):
-                if i in skip:
-                    continue
-                ph = i * 0.7
-                if mood == "clap":
-                    anim.clap(c, st, 180, "happy", Tm, ph, seated=True)
-                elif mood == "cheer":
-                    anim.cheer(c, st, 180, "laugh" if i % 3 else "happy", Tm, ph, seated=True)
-                elif mood == "gasp":
-                    anim.gasp(c, st, 180, k, Tm, ph, seated=True)
-                else:
-                    anim.sit(c, st, 180, "smile" if i % 4 else "sleepy", Tm, ph,
-                             head=(turn + anim.osc(Tm, 0.33, 4, ph), anim.osc(Tm, 0.5, 2, ph)))
-        out["fill"] = fill
-    return out
+    crowd=True fills every seat with a random audience member (hall["crowd"]: their character dicts; hall["fill"](T, mood)
+    seats them each frame)."""
+    import places
+    return places.place("school_hall", x=x, y=y, rows=rows, per_row=per_row, banner=banner, crowd=crowd)

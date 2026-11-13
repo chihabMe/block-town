@@ -38,8 +38,7 @@ def multi(name, parts, material, parent=None):
 
 def ico(radius, loc, material, parent=None, scale=(1, 1, 1), rng=None, sub=2):
     """A lumpy low-poly ball (bushes, tree crowns, hills)."""
-    bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=sub, radius=radius)
-    o = bpy.context.object
+    o = T.prim("ico_sphere", subdivisions=sub, radius=radius)
     if rng:
         for v in o.data.vertices:
             v.co *= rng.uniform(0.88, 1.12)
@@ -201,7 +200,7 @@ def _shops():
 
 
 def _town_hall():
-    hall = next((o for o in bpy.data.objects if o.name.startswith("hall") and o.parent is None and o.type == "EMPTY"), None)
+    hall = next((o for o in bpy.data.objects if o.get("bt_townhall") and o.parent is None), None)
     if hall is None:
         return
     stone, glass = T.mat("#E9E6DC"), T.mat("#9FD8F2", emit=0.25, key="glass")
@@ -223,8 +222,7 @@ def tree2(x, y, s=1.0, kind="round", seed=0):
     T.box((1.1 * s, 1.1 * s, 5.5 * s), (0, 0, 2.75 * s), T.mat("#5A3A22"), r)
     if kind == "pine":
         for i, (z, rad) in enumerate(((5.0, 3.6), (8.2, 2.8), (11.0, 1.9))):
-            bpy.ops.mesh.primitive_cone_add(vertices=7, radius1=rad * s, radius2=0, depth=4.6 * s)
-            o = bpy.context.object
+            o = T.prim("cone", vertices=7, radius1=rad * s, radius2=0, depth=4.6 * s)
             o.data.materials.append(T.mat(("#2F7A46", "#35874E", "#3C9456")[i]))
             o.location, o.parent = (0, 0, z * s), r
     else:
@@ -268,8 +266,7 @@ def _nature(rng):
         for cx, cy, cz, s in ((-260, 120, 130, 1.2), (250, 40, 150, 1.0), (-230, -120, 170, 1.3), (220, 230, 120, 0.9),
                               (120, -260, 160, 1.4), (-90, -300, 140, 1.1), (300, -140, 180, 1.2), (-300, 300, 150, 1.0)):
             for i in range(5):
-                bpy.ops.mesh.primitive_uv_sphere_add(segments=16, ring_count=8, radius=rng.uniform(10, 17) * s)
-                o = bpy.context.object
+                o = T.prim("uv_sphere", segments=16, ring_count=8, radius=rng.uniform(10, 17) * s)
                 o.location = (cx + (i - 2) * 12 * s * (0 if abs(cx) > abs(cy) else 1), cy + (i - 2) * 12 * s *
                               (1 if abs(cx) > abs(cy) else 0), cz + rng.uniform(-3, 5) * s)
                 o.scale = (0.3, 1, 0.8) if abs(cx) > abs(cy) else (1, 0.3, 0.8)

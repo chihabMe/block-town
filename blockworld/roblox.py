@@ -150,8 +150,7 @@ def rbox(size, loc, material, parent=None, rot=(0, 0, 0), bv=0.06, name="part"):
 
 def blob(scale, loc, material, parent=None, rot=(0, 0, 0)):
     """A smooth squashed sphere (hair volume, bells, buns)."""
-    bpy.ops.mesh.primitive_uv_sphere_add(segments=24, ring_count=12, radius=1)
-    o = bpy.context.object
+    o = T.prim("uv_sphere", segments=24, ring_count=12, radius=1)
     for p in o.data.polygons:
         p.use_smooth = True
     o.data.materials.append(material)
@@ -163,8 +162,7 @@ def blob(scale, loc, material, parent=None, rot=(0, 0, 0)):
 
 def cone(r, depth, base, direction, material, parent, verts=5):
     """A hair spike from base pointing along direction."""
-    bpy.ops.mesh.primitive_cone_add(vertices=verts, radius1=r, radius2=0, depth=depth)
-    o = bpy.context.object
+    o = T.prim("cone", vertices=verts, radius1=r, radius2=0, depth=depth)
     o.data.materials.append(material)
     d = Vector(direction).normalized()
     o.rotation_mode = "QUATERNION"
@@ -175,8 +173,7 @@ def cone(r, depth, base, direction, material, parent, verts=5):
 
 
 def disc(radius, depth, loc, material, parent=None, rot=(90, 0, 0), bv=0.3, verts=64):
-    bpy.ops.mesh.primitive_cylinder_add(vertices=verts, radius=radius, depth=depth)
-    o = bpy.context.object
+    o = T.prim("cylinder", vertices=verts, radius=radius, depth=depth)
     o.data.materials.append(material)
     o.location = loc
     o.rotation_euler = [math.radians(a) for a in rot]
@@ -325,8 +322,7 @@ def rchar(name, skin, shirt, pants, hair_style, hair_col, sleeves="short", strip
         parts["arm" + side], parts["leg" + side] = sh, hip
     neck = T.empty(name + ".neck", (0, 0, 2.0), body)
     head = T.empty(name + ".head", (0, 0, 0.62), neck)
-    bpy.ops.mesh.primitive_cylinder_add(vertices=40, radius=0.64, depth=1.2)
-    h = bpy.context.object
+    h = T.prim("cylinder", vertices=40, radius=0.64, depth=1.2)
     h.name = name + ".face"
     h.data.materials.append(head_mat(skin, face))
     bevel(h, 0.26, 6)
@@ -418,8 +414,7 @@ def puddles(spots):
     m = plastic("#3B4352", 0.02, key="puddle")
     out = []
     for i, (px, py, pr) in enumerate(spots):
-        bpy.ops.mesh.primitive_cylinder_add(vertices=24, radius=pr, depth=0.02, location=(px, py, T.ROAD + 0.11))
-        o = bpy.context.object
+        o = T.prim("cylinder", vertices=24, radius=pr, depth=0.02, location=(px, py, T.ROAD + 0.11))
         o.data.materials.append(m)
         o.scale = (1, 0.6 + 0.4 * ((i * 37) % 10) / 10, 1)
         out.append(o)

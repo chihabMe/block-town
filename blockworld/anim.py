@@ -32,7 +32,7 @@ __all__ = [
     "shot", "sign_mat", "text", "time_of_day", "town",
     # from here
     "EP", "FPS", "SCRIPT", "WT", "WE", "widx", "line", "at", "cut", "clamp", "smooth", "back", "snap", "mix", "osc",
-    "size", "feet", "card", "put", "over", "eyes", "closeup", "stand", "walk", "run", "math", "Vector",
+    "size", "feet", "card", "put", "over", "eyes", "closeup", "stand", "walk", "walk_dir", "run", "math", "Vector",
     "wcut", "wpop", "before_each_frame", "focus",
     # action moves (ep09)
     "sprint", "fall", "sit", "clap", "cheer", "gasp", "look_up", "drum", "juggle", "magic", "see_through", "dof",
@@ -225,6 +225,16 @@ def _fwd(yaw):
     """The direction a character faces for a yaw (0 = -Y)."""
     a = math.radians(yaw)
     return Vector((math.sin(a), -math.cos(a), 0.0))
+
+
+def walk_dir(c, start, yaw, t, face, ph=0.0, speed=4.5):
+    """Walk in any direction: from start (x, y, z) the way yaw faces (0 = -Y, 90 = +X), t seconds after setting off.
+    Same stride as walk(). Handy with place marks: walk_dir(c, p.spot("door"), p.yaw("door"), t, "happy")."""
+    sw = math.sin(2 * math.pi * 2.2 * t + ph)
+    s = c["root"].scale[2]
+    p = Vector(start) + _fwd(yaw) * speed * s * t
+    pose(c, (p.x, p.y, start[2] + abs(sw) * 0.22 * s), yaw, face,
+         armL=(58 * sw, 10), armR=(-58 * sw, 10), legL=-48 * sw, legR=48 * sw, lean=-8, tilt=7 * sw)
 
 
 def sprint(c, x, y0, way, T, face="scared", ph=0.0, speed=11.0, z=WALK, arms_up=False):
@@ -433,7 +443,7 @@ def run(shots, end=None, tod="day"):
         time_of_day(tod)
         for i, c in enumerate(town.CHARACTERS):
             size(c, c["scale"])
-            pose(c, loc=(300 + i * 12, -300, 0), face="smile")
+            pose(c, loc=(300 + i * 12, -300, 0))     # parked off screen (the face stays: no mesh rebuild)
         for c in CARDS:
             c.location, c.scale = (300, -320, -50), (0.001,) * 3
         for fn in RESETS:
