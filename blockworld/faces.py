@@ -110,6 +110,10 @@ def face(name):
         eye_dot(d, L, EY + 16, 52, 66), eye_dot(d, R, EY + 16, 52, 66)
         brow(d, L, 390, 40), brow(d, R, 390, 40)
         d.arc([S / 2 - 110, 640, S / 2 + 110, 780], 30, 150, fill=K, width=26)
+    elif name == "sleepy":
+        eye_closed(d, L, EY + 6), eye_closed(d, R, EY + 6)
+        brow(d, L, 410, -6, w=80, t=22), brow(d, R, 410, -6, w=80, t=22)
+        d.ellipse([S / 2 - 46, 690, S / 2 + 46, 760], fill=MOUTH, outline=K, width=14)
     elif name == "glasses":  # stern with square glasses, for a teacher
         for cx in (L, R):
             d.rounded_rectangle([cx - 120, EY - 90, cx + 120, EY + 100], 24, outline=K, width=24)
@@ -120,7 +124,7 @@ def face(name):
     return img.resize((512, 512), Image.LANCZOS)
 
 
-NAMES = ["smile", "happy", "stern", "angry", "sad", "scared", "shock", "smug", "laugh", "determined", "glasses"]
+NAMES = ["smile", "happy", "stern", "angry", "sad", "scared", "shock", "smug", "laugh", "determined", "glasses", "sleepy"]
 if __name__ == "__main__":
     out = Path(sys.argv[1])
     out.mkdir(parents=True, exist_ok=True)

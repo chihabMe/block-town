@@ -51,35 +51,78 @@ function serve() {
 await mkdir(OUT, { recursive: true });
 const wall0 = Date.now();
 const server = await serve();
-const browser = await puppeteer.launch({
-  executablePath: chrome(),
-  headless: "new",
-  args: ["--no-sandbox", "--disable-dev-shm-usage", "--ignore-gpu-blocklist", "--enable-gpu", "--use-gl=angle",
-         "--window-size=1080,1920", "--hide-scrollbars", "--force-device-scale-factor=1"],
-});
-const page = await browser.newPage();
-await page.setViewport({ width: 1080, height: 1920, deviceScaleFactor: 1 });
-page.on("pageerror", (err) => console.error("PAGE", err));
-page.on("console", (m) => { if (m.type() === "error" && !m.text().includes("404")) console.error("CONSOLE", m.text()); });
-await page.goto(`http://127.0.0.1:${server.address().port}/scene.html`, { waitUntil: "networkidle0", timeout: 180000 });
-await page.waitForFunction("window.__ready === true", { timeout: 180000 });
-const info = await page.evaluate(() => window.__check);
-console.log("CHECK", JSON.stringify(info));
-if (info.missing) console.error(`WARNING: ${info.missing} meshes have no material recipe`);
+
+let browser = null;
+let page = null;
+let info = null;
+
+async function launchBrowser() {
+  if (page) {
+    try { await page.close(); } catch {}
+    page = null;
+  }
+  if (browser) {
+    try { await browser.close(); } catch {}
+    browser = null;
+  }
+  browser = await puppeteer.launch({
+    executablePath: chrome(),
+    headless: "new",
+    args: ["--no-sandbox", "--disable-dev-shm-usage", "--ignore-gpu-blocklist", "--enable-gpu", "--use-gl=angle",
+           "--window-size=1080,1920", "--hide-scrollbars", "--force-device-scale-factor=1"],
+  });
+  page = await browser.newPage();
+  await page.setViewport({ width: 1080, height: 1920, deviceScaleFactor: 1 });
+  page.on("pageerror", (err) => console.error("PAGE", err));
+  page.on("console", (m) => { if (m.type() === "error" && !m.text().includes("404")) console.error("CONSOLE", m.text()); });
+  await page.goto(`http://127.0.0.1:${server.address().port}/scene.html`, { waitUntil: "networkidle0", timeout: 180000 });
+  await page.waitForFunction("window.__ready === true", { timeout: 180000 });
+  if (!info) {
+    info = await page.evaluate(() => window.__check);
+    console.log("CHECK", JSON.stringify(info));
+    if (info.missing) console.error(`WARNING: ${info.missing} meshes have no material recipe`);
+  }
+}
+
+await launchBrowser();
+
 const f0 = info.f0 || 0;
 const frames = Number(process.env.FRAMES || info.frames);
 const loop0 = Date.now();
 let render = 0;
+let drawnInBatch = 0;
+
 for (let i = 0; i < frames; i++) {
-  render += await page.evaluate((k) => window.renderAt(k), i);
-  await page.screenshot({ path: path.join(OUT, `f_${String(f0 + i).padStart(4, "0")}.jpg`), type: "jpeg",
-                          quality: QUALITY });
-  if (i % 300 === 0) console.log(`frame ${f0 + i} (${i + 1} of ${frames})`);
+  const framePath = path.join(OUT, `f_${String(f0 + i).padStart(4, "0")}.jpg`);
+  if (existsSync(framePath)) {
+    if (i % 300 === 0) console.log(`frame ${f0 + i} (${i + 1} of ${frames}) [cached]`);
+    continue;
+  }
+  if (drawnInBatch >= 250) {
+    await launchBrowser();
+    drawnInBatch = 0;
+  }
+  let attempts = 0;
+  while (attempts < 3) {
+    try {
+      render += await page.evaluate((k) => window.renderAt(k), i);
+      await page.screenshot({ path: framePath, type: "jpeg", quality: QUALITY });
+      drawnInBatch++;
+      break;
+    } catch (err) {
+      attempts++;
+      console.error(`Error rendering frame ${f0 + i} (attempt ${attempts}):`, err.message);
+      await launchBrowser();
+      drawnInBatch = 0;
+      if (attempts >= 3) throw err;
+    }
+  }
+  if (i % 300 === 0 || i === frames - 1) console.log(`frame ${f0 + i} (${i + 1} of ${frames})`);
 }
 const loop = (Date.now() - loop0) / 1000;
 await writeFile(path.join(DATA, "capture.json"), JSON.stringify({ info, frames, loop_s: loop,
   per_frame_s: loop / frames, render_ms: render / frames, total_s: (Date.now() - wall0) / 1000 }, null, 1));
 console.log(`frames ${frames} in ${loop.toFixed(1)} s => ${(loop / frames).toFixed(3)} s/frame ` +
             `(render ${(render / frames).toFixed(1)} ms); written to ${OUT}`);
-await browser.close();
+if (browser) await browser.close();
 server.close();

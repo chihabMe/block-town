@@ -19,16 +19,22 @@ COST = 200                   # approximate credits per generation (ElevenLabs pr
 LOOPS = ("-loop",)
 
 
+NAMES = ("ELEVENLABS_API_KEY", "SOUND_KEY")       # the variable names the key may be saved under
+
+
 def key():
-    k = os.environ.get("ELEVENLABS_API_KEY", "")
-    f = Path.home() / ".config" / "elevenlabs" / "env"
-    if not k and f.exists():
-        for line in f.read_text().splitlines():
-            if line.startswith("ELEVENLABS_API_KEY="):
-                k = line.split("=", 1)[1].strip()
-    if not k:
-        sys.exit("no ElevenLabs key: set ELEVENLABS_API_KEY or create ~/.config/elevenlabs/env")
-    return k
+    """The key from the environment, else ~/.config/elevenlabs/env, else ~/.env (never printed)."""
+    for n in NAMES:
+        if os.environ.get(n):
+            return os.environ[n]
+    for f in (Path.home() / ".config" / "elevenlabs" / "env", Path.home() / ".env"):
+        if f.exists():
+            for line in f.read_text().splitlines():
+                name, _, val = line.partition("=")
+                if name.strip().removeprefix("export ").strip() in NAMES and val.strip():
+                    return val.strip().strip("'\"")
+    sys.exit("no ElevenLabs key: set ELEVENLABS_API_KEY (or SOUND_KEY) in the environment, ~/.config/elevenlabs/env "
+             "or ~/.env")
 
 
 def call(path, body=None):
@@ -41,7 +47,13 @@ def call(path, body=None):
 
 
 def credits():
-    s = json.loads(call("/user/subscription"))
+    """(plan, credits left, limit), or None when the key may not read the account (a key made without user_read)."""
+    try:
+        s = json.loads(call("/user/subscription"))
+    except urllib.error.HTTPError as e:
+        if e.code == 401 and b"user_read" in e.read():
+            return None
+        raise
     return s.get("tier"), s["character_limit"] - s["character_count"], s["character_limit"]
 
 
@@ -90,8 +102,12 @@ def main():
     reserve = 2000
     if "--reserve" in args:
         i = args.index("--reserve"); reserve = int(args[i + 1]); del args[i:i + 2]
-    tier, left, limit = credits()
-    print(f"plan {tier}: {left} of {limit} credits left")
+    acct = credits()
+    if acct:
+        tier, left, limit = acct
+        print(f"plan {tier}: {left} of {limit} credits left")
+    else:
+        print("this key may not read the account (no user_read permission): credits unknown, reserve not checked")
     if args == ["--credits"]:
         return
     redo = "--redo" in args
@@ -102,14 +118,17 @@ def main():
             sys.exit(f"{n} is not in {LIST.name}")
     todo = [n for n in names if redo or not (SFX / f"{n}.mp3").exists()]
     need = len(todo) * COST
-    if left - need < reserve:
+    if acct and left - need < reserve:
         sys.exit(f"{len(todo)} sounds need about {need} credits; only {left} left (keeping {reserve} in reserve)")
     for n in todo:
         prompt, secs = table[n]
         generate(n, prompt, secs)
         print(f"  made {n}.mp3 ({secs:.1f} s)", flush=True)
-    tier, after, _ = credits()
-    print(f"done: used {left - after} credits, {after} left")
+    acct2 = credits()
+    if acct and acct2:
+        print(f"done: used {left - acct2[1]} credits, {acct2[1]} left")
+    else:
+        print(f"done: {len(todo)} sounds, about {need} credits (balance not readable with this key)")
 
 
 if __name__ == "__main__":

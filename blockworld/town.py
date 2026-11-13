@@ -366,8 +366,14 @@ def ground():
             box((WALK_W - 0.5, 0.12, 0.02), (x + sx * 0.25, -200 + i, WALK_H + 0.005), mat("#A9ACB5"))
 
 
+HOUSES = []          # every house: {"x", "y", "win"} (its own window material, so its lights can go off alone)
+WIN_K = 1.0          # the current mood's window glow
+
+
 def house(x, y, colour, dark, w=24, d=18, h=15, roof_h=8, roof="#22232B", door="#3A1E14"):
     r = empty("house", (x, y, 0), yaw=-90 if x > 0 else 90)      # the door faces the road
+    WIN = mat("#F7CE6E", emit=1.0, key=("window", x, y))           # this house's windows (window_light)
+    HOUSES.append({"x": x, "y": y, "win": WIN})
     wall = banded(colour, dark)
     box((w, d, h), (0, 0, h / 2), wall, r)
     box((w + 0.6, d + 0.6, 0.7), (0, 0, 0.35), mat("#8A8D96"), r)                       # foundation
@@ -593,10 +599,24 @@ def emission(material, strength):
     material.node_tree.nodes["Principled BSDF"].inputs["Emission Strength"].default_value = strength
 
 
+def window_light(house, k):
+    """Switch one house's windows: k = 1 lit (the mood's level), 0 dark, in between dimmed. house = an index into
+    HOUSES or an (x, y) spot (the nearest house). Call it inside a shot; every frame starts with all windows lit."""
+    if not isinstance(house, int):
+        house = min(range(len(HOUSES)), key=lambda i: (HOUSES[i]["x"] - house[0]) ** 2 + (HOUSES[i]["y"] - house[1]) ** 2)
+    emission(HOUSES[house]["win"], WIN_K * k)
+
+
+def _windows_reset():
+    for hs in HOUSES:
+        emission(hs["win"], WIN_K)
+
+
 def time_of_day(mode):
     """"day", "dusk" or "night". Call it inside a shot function BEFORE shot(); every frame starts as the episode default."""
-    global ELEV, TOD
+    global ELEV, TOD, WIN_K
     if mode == TOD:
+        _windows_reset()
         return
     if mode not in TIMES:
         raise ValueError(f"no time of day {mode!r}. Choose from: {', '.join(TIMES)}")
@@ -610,6 +630,8 @@ def time_of_day(mode):
     sun_d.angle = math.radians(6)
     ELEV = elev
     emission(WIN, win)
+    WIN_K = win
+    _windows_reset()
     emission(LAMP_BULB, bulb)
     if "cloud" in MATS:
         emission(MATS["cloud"], cloud)

@@ -6,7 +6,7 @@ Reads EPISODE_DIR/script.txt (one sentence a line) and EPISODE_DIR/vo_config.jso
 Writes EPISODE_DIR/vo/voice_raw.wav, voice.wav and lines.json.
 Then run blockworld/words.py on the same folder to make vo/times.json.
 
-Two engines, picked by "engine" in vo_config.json:
+Three engines, picked by "engine" in vo_config.json:
 
   "fish"   (recommended) the niche's narrator voice, Fish Audio community voice "Roblox", through OpenRouter.
            Scores 0.95-0.97 against the niche voice. The whole script is sent as ONE take, so it sounds like one
@@ -20,6 +20,13 @@ Two engines, picked by "engine" in vo_config.json:
            "presence_db": 4.5 a treble lift above 2.5 kHz: their voices are brighter than the raw Fish take
            "tempo": 0.95      slower (< 1) or faster (> 1) without changing the pitch. Default 1.0
            python3 blockworld/vo.py EPISODE --post-only   redoes these steps on the saved take, with no new request
+
+  "elevenlabs" an ElevenLabs voice (a Voice Library voice can be used commercially on a paid plan). Same one-take,
+           tighten / presence / tempo steps as "fish", plus "pitch_semitones" (rubberband, formant kept) on the whole
+           take. Key: SOUND_KEY or ELEVENLABS_API_KEY (environment or ~/.env), never printed. Costs about 1 credit a
+           character: ask before running it. The closest library voice to the niche (2026-11-13):
+      {"engine": "elevenlabs", "voice": "fBD19tfE58bkETeiwUoC", "model": "eleven_multilingual_v2",
+       "pitch_semitones": 2}       Little Dude II +2 semitones: 0.88-0.91 against the niche voice
 
   "kokoro" (default, free and offline, scores about 0.85-0.88):
     {"blend": "af_jessica:3,am_puck:2", "pitch_semitones": 3, "default_speed": 1.3, "default_pause": 0.18,
@@ -56,6 +63,18 @@ def openrouter_key():
     sys.exit("OPENROUTER_API_KEY is not set (environment or ~/.env). Get a key at openrouter.ai.")
 
 
+def elevenlabs_key():
+    for name in ("SOUND_KEY", "ELEVENLABS_API_KEY"):
+        if os.environ.get(name):
+            return os.environ[name]
+    env = Path.home() / ".env"
+    for line in env.read_text().splitlines() if env.exists() else []:
+        for name in ("SOUND_KEY", "ELEVENLABS_API_KEY"):
+            if line.startswith(name + "="):
+                return line.split("=", 1)[1].strip().strip("\"'")
+    sys.exit("no ElevenLabs key: set SOUND_KEY or ELEVENLABS_API_KEY (environment or ~/.env)")
+
+
 def fish(ep, cfg):
     import re, urllib.error, urllib.request
     out = ep / "vo"
@@ -64,11 +83,21 @@ def fish(ep, cfg):
     text = " ".join(lines)
     for word, said in cfg.get("say", {}).items():
         text = re.sub(rf"\b{re.escape(word)}\b", said, text)
-    model = cfg.get("model", "fish-audio/s2.1-pro-free:free")
-    body = json.dumps({"model": model, "input": text, "voice": cfg.get("voice", "eb4bcc6dbb634e9eaee239c94266935e"),
-                       "response_format": "mp3"}).encode()
-    req = urllib.request.Request("https://openrouter.ai/api/v1/audio/speech", data=body,
-                                 headers={"Authorization": f"Bearer {openrouter_key()}", "Content-Type": "application/json"})
+    if cfg.get("engine") == "elevenlabs":
+        model = cfg.get("model", "eleven_multilingual_v2")
+        body = {"text": text, "model_id": model}
+        if cfg.get("voice_settings"):
+            body["voice_settings"] = cfg["voice_settings"]
+        req = urllib.request.Request(f"https://api.elevenlabs.io/v1/text-to-speech/{cfg['voice']}"
+                                     "?output_format=mp3_44100_128", data=json.dumps(body).encode(),
+                                     headers={"xi-api-key": elevenlabs_key(), "Content-Type": "application/json"})
+    else:
+        model = cfg.get("model", "fish-audio/s2.1-pro-free:free")
+        body = json.dumps({"model": model, "input": text, "voice": cfg.get("voice", "eb4bcc6dbb634e9eaee239c94266935e"),
+                           "response_format": "mp3"}).encode()
+        req = urllib.request.Request("https://openrouter.ai/api/v1/audio/speech", data=body,
+                                     headers={"Authorization": f"Bearer {openrouter_key()}",
+                                              "Content-Type": "application/json"})
     if "--post-only" in sys.argv:
         if not (out / "voice_raw.mp3").exists():
             sys.exit(f"--post-only needs a saved take at {out / 'voice_raw.mp3'}")
@@ -79,8 +108,10 @@ def fish(ep, cfg):
             with urllib.request.urlopen(req, timeout=600) as r:
                 (out / "voice_raw.mp3").write_bytes(r.read())
         except urllib.error.HTTPError as e:
-            sys.exit(f"OpenRouter said {e.code}: {e.read()[:300].decode(errors='replace')}")
+            sys.exit(f"{cfg.get('engine')} said {e.code}: {e.read()[:300].decode(errors='replace')}")
     af = []
+    if float(cfg.get("pitch_semitones", 0)):
+        af.append(f"rubberband=pitch={2 ** (float(cfg['pitch_semitones']) / 12):.5f}:formant=preserved")
     if cfg.get("tighten", True):
         af.append("silenceremove=start_periods=1:start_threshold=-45dB:stop_periods=-1:stop_duration=0.08"
                   ":stop_threshold=-42dB:stop_silence=0.05")
@@ -103,10 +134,10 @@ def main():
         sys.exit(__doc__)
     ep0 = Path(sys.argv[1]).resolve()
     cfg0 = json.loads((ep0 / "vo_config.json").read_text())
-    if cfg0.get("engine") == "fish":
+    if cfg0.get("engine") in ("fish", "elevenlabs"):
         return fish(ep0, cfg0)
     if cfg0.get("engine", "kokoro") != "kokoro":
-        sys.exit(f"vo_config.json engine must be 'fish' or 'kokoro', not {cfg0['engine']!r}")
+        sys.exit(f"vo_config.json engine must be 'fish', 'elevenlabs' or 'kokoro', not {cfg0['engine']!r}")
     try:
         import numpy as np
         import soundfile as sf

@@ -132,6 +132,18 @@ python3 -I SKILL/blockworld/finish.py EPISODE                # captions + voice 
 ```
 
 - `check` renders nothing: it runs every shot, prints the shot table and warns about shots over 2.5 s.
+- **Automatic still checks** (`blockworld/stillcheck.py`, since ep08): call `focus(character, tag, ...)` in every
+  shot. `check` and `stills` then report faces blocked (by a post, a person, a tag or the character's own arm), faces
+  under the caption band, tags outside the safe area (x 5-85 %, between TikTok's top bar and the captions), tags
+  covering each other, and anything within 1 stud of the lens. Results go to `EPISODE/still_check.txt`. Fix every line
+  before showing stills, then still look at them: it does not judge framing or whether the picture tells the line.
+- **60 fps with motion blur** (optional): `finish.json` `"render_fps": 240, "blur": 4` renders 240 frames a second
+  and averages each 4 into one 60 fps frame. About 1.6 min of rendering per second of video.
+- **Colour turn** (optional): `finish.json` `"grade": {"word": 24, "ramp": 0.5, "saturation": 0.6,
+  "brightness": -0.05, "cool": 0.1, "vignette": true}` fades the picture colder, darker and flatter from that script
+  word (the story's turn). Captions are not graded. `finish.py EPISODE --plain` also writes `<name>_plain.mp4`
+  (30 fps, no blur, no grade) for a side-by-side.
+- ep08 (`episodes/ep08-price-tags-10s`) is the 10-second test of these, with ~1 s shots.
 - `stills` writes two half-size Blender pictures per shot (30 % and 85 % through) into `EPISODE/stills/`. Use
   `BT_LIFE=1` so tags are placed the way the final render places them. **Look at every still** before showing any.
 - `render_threejs.sh` runs in the background if your commands time out (about 10 minutes for 66 s). It installs the

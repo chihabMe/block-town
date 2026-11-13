@@ -209,7 +209,7 @@ def finish():
         vals = [e.get(nm, 0.0) for e in S["emit"]]
         if max(vals) - min(vals) > 1e-4:
             emit[nm] = vals
-    out = {"f0": F0, "f1": F1, "fps": 30, "frames": n,
+    out = {"f0": F0, "f1": F1, "fps": getattr(sys.modules.get("anim"), "FPS", 30), "frames": n,
            "static": {str(objs[i]["hid"]): {"m": [round(float(x), 5) for x in M[0, i]], "v": bool(V[0, i])}
                       for i in range(len(objs))},
            "dynamic": [{"hid": objs[i]["hid"], "v": [int(x) for x in V[:, i]],

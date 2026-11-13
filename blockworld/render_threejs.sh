@@ -10,10 +10,12 @@ set -euo pipefail
 SKILL="$(cd "$(dirname "$0")/.." && pwd)"
 EP="$(cd "$1" && pwd)"
 export BT_LIFE="${BT_LIFE:-1}"
+# finish.json "render_fps" (e.g. 240 with "blur": 4 -> a 60 fps video with motion blur); default 30
+export BT_FPS="${BT_FPS:-$(python3 -c "import json,sys,os; p=sys.argv[1]; print(json.load(open(p)).get('render_fps', 30) if os.path.exists(p) else 30)" "$EP/finish.json")}"
 if [ ! -f "$EP/shots.json" ]; then
   blender -b --factory-startup --python-exit-code 1 -P "$SKILL/blockworld/run.py" -- "$EP" check >/dev/null
 fi
-LAST=$(python3 -c "import json,math,sys; s=json.load(open(sys.argv[1])); print(math.ceil(s[-1]['start']*30)-1)" "$EP/shots.json")
+LAST=$(python3 -c "import json,math,sys; s=json.load(open(sys.argv[1])); print(math.ceil(s[-1]['start']*int(sys.argv[2]))-1)" "$EP/shots.json" "$BT_FPS")
 F0="${2:-0}"
 F1="${3:-$LAST}"
 if [ ! -d "$SKILL/blockworld/threejs/node_modules/three" ]; then
@@ -22,7 +24,7 @@ if [ ! -d "$SKILL/blockworld/threejs/node_modules/three" ]; then
 fi
 DATA="$EP/threejs"
 mkdir -p "$DATA"
-echo "$(date +%H:%M:%S) bake frames $F0-$F1 (life layer: $BT_LIFE)"
+echo "$(date +%H:%M:%S) bake frames $F0-$F1 at $BT_FPS fps (life layer: $BT_LIFE)"
 BT_TJ_OUT="$DATA" BT_FRAME_DIR="$DATA/unused" blender -b --factory-startup --python-exit-code 1 \
   -P "$SKILL/blockworld/threejs/bake.py" -- "$EP" render "$F0" "$F1" > "$DATA/bake.log" 2>&1 \
   || { echo "bake failed: see $DATA/bake.log"; tail -20 "$DATA/bake.log"; exit 1; }

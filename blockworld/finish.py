@@ -163,9 +163,44 @@ def fix_loudness(path, target=-14.0):
     return loudness(path)
 
 
-def encode(ep, out, ass, voice, resolved, music=None, static=False):
+def video_chain(conf, start, plain=False):
+    """The picture filters before the captions: motion blur, then the colour turn.
+
+    finish.json "render_fps": the rate the frames were rendered at (30 by default; 240 for motion blur).
+                "blur": how many rendered frames are averaged into one output frame (4: 240 -> 60 fps, a full shutter).
+                "grade": {"word": 24, "ramp": 0.5, "saturation": 0.6, "brightness": -0.05, "cool": 0.1, "vignette": true}
+                         from that script word on, the picture fades over ramp seconds to a colder, darker, flatter look.
+    plain=True keeps every rendered frame step but no blur and no grade, at 30 fps: the "before" version for a
+    side-by-side."""
+    fps = int(conf.get("render_fps", 30))
+    blur = 1 if plain else int(conf.get("blur", 1))
+    chain = []
+    if plain and fps > 30:
+        chain.append(f"framestep={fps // 30}")
+    elif blur > 1:
+        chain.append(f"tmix=frames={blur},framestep={blur}")
+    out_fps = 30 if plain and fps > 30 else fps / blur
+    g = None if plain else conf.get("grade")
+    if not g:
+        return chain, None, out_fps
+    t0 = start[int(g["word"])] - 0.04 if "word" in g else float(g["at"])
+    r = float(g.get("ramp", 0.5))
+    look = [f"eq=saturation={g.get('saturation', 0.6)}:brightness={g.get('brightness', -0.05)}:contrast={g.get('contrast', 1.06)}"]
+    c = float(g.get("cool", 0.1))
+    if c:
+        look.append(f"colorbalance=rs={-c:.3f}:bs={c:.3f}:rm={-c / 2:.3f}:bm={c / 2:.3f}:rh={-c / 2:.3f}:bh={c / 3:.3f}")
+    if g.get("vignette", True):
+        look.append("vignette=angle=0.55")
+    ramp = f"blend=all_expr='A+(B-A)*clip((T-{t0:.3f})/{r:.3f},0,1)'"
+    return chain, (",".join(look), ramp), out_fps
+
+
+def encode(ep, out, ass, voice, resolved, music=None, static=False, conf=None, start=None, plain=False):
+    conf = conf or {}
     frames = ep / "frames" / "f_%04d.jpg"
-    cmd = ["ffmpeg", "-y", "-loglevel", "error", "-framerate", "30", "-i", str(frames), "-i", str(voice)]
+    chain, grade, out_fps = video_chain(conf, start, plain)
+    cmd = ["ffmpeg", "-y", "-loglevel", "error", "-framerate", str(int(conf.get("render_fps", 30))), "-i", str(frames),
+           "-i", str(voice)]
     filters, extra = [], []
     for i, (src, t, vol, *rest) in enumerate(resolved):
         length = rest[0] if rest else None
@@ -192,7 +227,13 @@ def encode(ep, out, ass, voice, resolved, music=None, static=False):
     mix = f"[1]{voice_fx}apad,volume=1.0[v];" + "".join(f + ";" for f in filters) + "[v]" + "".join(extra) + \
           f"amix=inputs={len(extra) + 1}:normalize=0:duration=first," + \
           ("" if static else "loudnorm=I=-14:TP=-1.5:LRA=11,") + "aresample=48000[a]"
-    cmd += ["-filter_complex", f"[0]ass={esc(ass)}:fontsdir={esc(FONTS)}[vid];" + mix,
+    pre = ",".join(chain + ["format=yuv420p"])
+    if grade:
+        look, ramp = grade
+        video = f"[0]{pre},split[pa][pb];[pb]{look}[pg];[pa][pg]{ramp},ass={esc(ass)}:fontsdir={esc(FONTS)}[vid];"
+    else:
+        video = f"[0]{pre},ass={esc(ass)}:fontsdir={esc(FONTS)}[vid];"
+    cmd += ["-filter_complex", video + mix, "-r", f"{out_fps:g}",
             "-map", "[vid]", "-map", "[a]",
             "-c:v", "libx264", "-preset", "slow", "-crf", "17", "-maxrate", "6M", "-bufsize", "12M", "-pix_fmt", "yuv420p",
             "-c:a", "aac", "-b:a", "256k", "-shortest", str(out)]
@@ -244,7 +285,9 @@ def main():
             rel.append((src, t, round(gain, 4), length))
         print(f"static mix: speech at {speech:.1f} LUFS momentary; effects set relative to it")
         resolved = rel
-    encode(ep, ep / f"{ep.name}.mp4", ass, voice, resolved, static=static)
+    encode(ep, ep / f"{ep.name}.mp4", ass, voice, resolved, static=static, conf=conf, start=start)
+    if "--plain" in sys.argv:                           # the same frames without blur or grade, at 30 fps
+        encode(ep, ep / f"{ep.name}_plain.mp4", ass, voice, resolved, static=static, conf=conf, start=start, plain=True)
     if "--music" in sys.argv:
         conf["music"] = sys.argv[sys.argv.index("--music") + 1]
     if conf.get("music"):
@@ -252,12 +295,12 @@ def main():
         song = song if song.is_absolute() else ep / song
         if not song.exists():
             sys.exit(f"music file not found: {song}")
-        start = float(conf.get("music_start", 0))
-        length = len(list((ep / "frames").glob("f_*.jpg"))) / 30
+        start_s = float(conf.get("music_start", 0))
+        length = len(list((ep / "frames").glob("f_*.jpg"))) / int(conf.get("render_fps", 30))
         gain = mean_db(voice) + float(conf.get("music_db", -4)) - mean_db(song)
         print(f"music: {song.name}, {gain:+.1f} dB to sit {conf.get('music_db', -4)} dB under the voice")
         encode(ep, ep / f"{ep.name}_music.mp4", ass, voice, resolved,
-               (song, gain, start, length, float(conf.get("music_loop", 0))), static=static)
+               (song, gain, start_s, length, float(conf.get("music_loop", 0))), static=static, conf=conf, start=start)
 
 
 if __name__ == "__main__":

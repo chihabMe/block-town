@@ -18,7 +18,9 @@ import bpy
 from mathutils import Quaternion, Vector
 
 import life
+import stillcheck
 import town
+from stillcheck import focus
 from town import (ALL, BOY, DAD, GRAN, HOUSE_Y, KID, LX, MAN, NIA, ROAD, RX, TALL, TEACH, WALK, WIN, banded, box, brick,
                   build_town, character, cylinder, empty, face_names, lin, mat, park, pose, shot, sign_mat, text,
                   time_of_day)
@@ -31,7 +33,7 @@ __all__ = [
     # from here
     "EP", "FPS", "SCRIPT", "WT", "WE", "widx", "line", "at", "cut", "clamp", "smooth", "back", "snap", "mix", "osc",
     "size", "feet", "card", "put", "over", "eyes", "closeup", "stand", "walk", "run", "math", "Vector",
-    "wcut", "wpop", "before_each_frame",
+    "wcut", "wpop", "before_each_frame", "focus",
 ]
 
 ARGS = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
@@ -39,7 +41,7 @@ if not ARGS:
     raise SystemExit("usage: blender -b --factory-startup -P run.py -- EPISODE_DIR [check|stills|frame|render|resume]")
 EP = Path(ARGS[0]).resolve()
 MODE = ARGS[1] if len(ARGS) > 1 else "check"
-FPS = 30
+FPS = int(os.environ.get("BT_FPS", "30"))   # 240 for the motion-blur render (finish.json "render_fps")
 LIFE = os.environ.get("BT_LIFE") == "1"   # extra motion layer, see life.py
 
 # ---------------------------------------------------------------- the words and when they are spoken
@@ -273,6 +275,7 @@ def run(shots, end=None, tod="day"):
             c.location, c.scale = (300, -320, -50), (0.001,) * 3
         for fn in RESETS:
             fn(T)
+        stillcheck.reset()
         i = max(i for i, s in enumerate(shots) if s[1] <= T + 1e-6)
         shots[i][2](T - shots[i][1], stops[i] - shots[i][1], T)
         if LIFE:                           # extra idle motion, camera wobble and scene sway (blockworld/life.py)
@@ -289,13 +292,29 @@ def run(shots, end=None, tod="day"):
     def words_in(a, b):
         return " ".join(w for w, t in zip(SCRIPT, WT) if a - 0.05 <= t < b - 0.05)
 
+    report = []
+
+    def still_check(n, T):
+        for p in stillcheck.check(CARDS):
+            line = f"{n} at {T:.2f}s: {p}"
+            if not any(r.split(": ", 1)[1] == line.split(": ", 1)[1] and r.startswith(n + " ") for r in report):
+                report.append(line)
+
+    def write_report():
+        (EP / "still_check.txt").write_text("\n".join(report) + ("\n" if report else "no problems found\n"))
+        print(f"\nSTILL CHECK: {len(report)} problem(s)" + ("" if report else ", none found"))
+        for r in report:
+            print("STILL CHECK", r)
+
     if MODE == "check":
+        town.scene.render.resolution_x, town.scene.render.resolution_y = 1080, 1920   # the still checks need 9:16
         warn = []
         print(f"\n{'#':>3} {'shot':<16}{'start':>7}{'len':>6}  words")
         for i, (n, s, _) in enumerate(shots):
             d = stops[i] - s
             for k in (0.0, 0.3, 0.6, 0.999):
                 frame(s + d * k)
+                still_check(n, s + d * k)
             print(f"{i + 1:>3} {n:<16}{s:>7.2f}{d:>6.2f}  {words_in(s, stops[i])}")
             if d > 2.5:
                 warn.append(f"shot {n!r} is {d:.2f} s: over 2.5 s, split it or add a second angle")
@@ -305,6 +324,7 @@ def run(shots, end=None, tod="day"):
               + (" (word times ESTIMATED)" if ESTIMATED else ""))
         for w in warn:
             print("WARNING:", w)
+        write_report()
         print("check passed: every shot function runs")
     elif MODE in ("stills", "frame"):
         town.setup_render(540, 960, 12)
@@ -319,8 +339,10 @@ def run(shots, end=None, tod="day"):
                     continue
                 for tag, k in (("a", 0.3), ("b", 0.85)):
                     frame(s + (stops[i] - s) * k)
+                    still_check(n, s + (stops[i] - s) * k)
                     town.render_still(EP / "stills" / f"{i + 1:03d}_{n}_{tag}.jpg")
                     print("still", n, tag, flush=True)
+            write_report()
     elif MODE in ("render", "resume"):
         if ESTIMATED:
             raise SystemExit("word times are estimated: make the narration (vo.py, words.py) before the final render")

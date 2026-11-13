@@ -339,8 +339,19 @@ def rule_sign(x, y, big, small="BY ORDER OF THE MAYOR", yaw=0, z=None, lift=2.4)
     return r
 
 
+CLOCKS = {}
+
+
+def set_clock(clock, hours, minutes):
+    """Move a giant_clock's hands (call it inside a shot: 2:59 -> 3:00). minutes may be fractional (a sweeping hand)."""
+    mh, hh = CLOCKS[clock.name]
+    mh.rotation_euler = (0, math.radians(minutes * 6), 0)
+    hh.rotation_euler = (0, math.radians((hours % 12) * 30 + minutes * 0.5), 0)
+
+
 def giant_clock(x, y, hours=7, minutes=58, yaw=0, frame="#D9A93A", rim="#C8322E"):
     """A three-storey alarm clock on a stone plinth: an example rule landmark (curfews, deadlines, timers).
+    Its hands move with set_clock(clock, h, m).
     Faces its local -Y. Make a new landmark the same way: big, simple, one strong colour, readable from far away."""
     r = T.empty("clock", (x, y, 0), yaw=yaw)
     stone = plastic("#8D8F98", 0.7)
@@ -358,10 +369,13 @@ def giant_clock(x, y, hours=7, minutes=58, yaw=0, frame="#D9A93A", rim="#C8322E"
         a = math.radians(i * 30)
         rbox((0.5 if i % 3 == 0 else 0.3, 0.2, 1.6 if i % 3 == 0 else 0.9),
              (math.sin(a) * 8.2, -3.8, cz + math.cos(a) * 8.2), ink, r, rot=(0, math.degrees(a), 0), bv=0.05)
-    for length, width, ang, yy in ((7.2, 0.7, minutes * 6, -3.9), (5.0, 0.9, (hours % 12) * 30 + minutes * 0.5, -3.95)):
-        a = math.radians(ang)
-        rbox((width, 0.2, length), (math.sin(a) * (length / 2 - 0.3), yy, cz + math.cos(a) * (length / 2 - 0.3)), ink, r,
-             rot=(0, ang, 0), bv=0.1)
+    hands = []
+    for length, width, yy in ((7.2, 0.7, -3.9), (5.0, 0.9, -3.95)):                 # minute hand, hour hand
+        pivot = T.empty("clockhand", (0, yy, cz), r)                                  # turns about the clock's centre
+        rbox((width, 0.2, length), (0, 0, length / 2 - 0.3), ink, pivot, bv=0.1)
+        hands.append(pivot)
+    CLOCKS[r.name] = hands
+    set_clock(r, hours, minutes)
     disc(0.8, 0.5, (0, -4.0, cz), brass, r, bv=0.1)
     for sx in (-1, 1):
         blob((4.4, 4.4, 3.2), (sx * 7.5, 0, cz + 11.5), brass, r)

@@ -130,7 +130,7 @@ def apply(T, t, d):
 
 # ---------------------------------------------------------------- tags: never covered, never off-screen
 SAFE_X = (0.05, 0.85)      # TikTok's buttons sit on the right
-SAFE_Y = (0.40, 0.93)      # captions sit at about 0.34 from the bottom
+SAFE_Y = (0.40, 0.90)      # captions sit at about 0.34 from the bottom; TikTok's top bar covers the top 10 %
 
 
 def _corners(objs):

@@ -14,6 +14,11 @@ pictures.json maps a name to a recipe. Kinds:
    "bubbles": [["time", "Today 6:02 PM"], ["text", ["line 1", "line 2"]], ["hearts", 21, "x47"]]}
   {"kind": "notice", "title": "Wi-Fi", "big": "0 BARS", "lines": ["...", "..."], "colour": [230, 60, 60]}
   {"kind": "lock"}                                                             the hand-held phone lock screen
+  {"kind": "night_text", "time": "3:00", "from": "Unknown", "text": "who's still awake?"}   dark lock screen + one message
+chat extras: ["me", ["line"]] is your own blue bubble on the right, ["note", "Delivered"] small grey text;
+  "dark": true night mode, "time": "3:00" the status-bar clock, "draft": "M" text typed but not sent (send button),
+  "text_size": 76 bigger bubble text (default 58),
+  "who": "unknown" a grey "?" contact picture.
   {"kind": "town_map", "title": "TOWN MAP"}                                    the folded paper map
 "avatar": {"face": "smile", "skin": [235, 200, 168], "hair": [222, 226, 232]} draws any contact picture.
 
@@ -96,11 +101,11 @@ def _dim(c):
     return tuple(round(v * 0.35 + 128 * 0.65) for v in c[:3])
 
 
-def status(im, ink, bars=0, label=None):
+def status(im, ink, bars=0, label=None, time="9:41"):
     """Time, signal bars (or a "No Service" label), Wi-Fi fan, battery, camera pill, home bar."""
     d = ImageDraw.Draw(im)
     d.rounded_rectangle([W / 2 - 150, 34, W / 2 + 150, 120], 43, fill=(0, 0, 0))
-    d.text((110, 52), "9:41", font=font("semibold", 54), fill=ink)
+    d.text((110, 52), time, font=font("semibold", 54), fill=ink)
     if label:
         d.text((712, 64), label, font=font("medium", 34), fill=ink)
     else:
@@ -121,6 +126,13 @@ def centred(d, y, text, f, fill, x=W / 2):
 
 
 def avatar(spec, size):
+    if spec.get("who") == "unknown":                          # no contact picture: a grey "?"
+        im = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+        d = ImageDraw.Draw(im)
+        d.ellipse([0, 0, size - 1, size - 1], fill=(110, 116, 130))
+        f = font("bold", round(size * 0.6))
+        d.text(((size - d.textlength("?", font=f)) / 2, size * 0.12), "?", font=f, fill=WHITE)
+        return im
     a = CAST.get(spec.get("who", ""), None) or spec.get("avatar") or CAST["gran"]
     skin, hair = tuple(a["skin"]), tuple(a["hair"])
     im = Image.new("RGBA", (size, size), (0, 0, 0, 0))
@@ -197,24 +209,34 @@ def hotspot(s):
 
 
 def chat(s):
-    im = base((250, 250, 252), (243, 244, 248))
-    status(im, INK, label="No Service")
+    dark = s.get("dark", False)                               # night mode: black background, light text
+    ink = WHITE if dark else INK
+    grey_bubble = (44, 46, 54) if dark else (229, 231, 237)
+    im = base((10, 10, 14), (6, 6, 10)) if dark else base((250, 250, 252), (243, 244, 248))
+    status(im, ink, label=s.get("status_label", "No Service"), time=s.get("time", "9:41"))
     d = ImageDraw.Draw(im)
-    d.rectangle([0, 150, W, 440], fill=(244, 245, 249))
+    d.rectangle([0, 150, W, 440], fill=(20, 20, 26) if dark else (244, 245, 249))
     av = avatar(s, 150)
     im.paste(av, ((W - 150) // 2, 175), av)
-    centred(d, 340, s.get("name", "Grandma"), font("semibold", 46), INK)
-    d.line([(0, 440), (W, 440)], fill=(222, 224, 230), width=3)
+    centred(d, 340, s.get("name", "Grandma"), font("semibold", 46), ink)
+    d.line([(0, 440), (W, 440)], fill=(40, 42, 50) if dark else (222, 224, 230), width=3)
     y = 520
     for b in s.get("bubbles", []):
-        if b[0] == "text":
-            f = font("medium", 58)
+        if b[0] in ("text", "me"):                            # "text" = them (left, grey), "me" = you (right, blue)
+            ts = s.get("text_size", 58)                       # bigger text reads better in a phone insert
+            f = font("medium", ts)
+            lh = round(ts * 1.28)
             w = max(d.textlength(t, font=f) for t in b[1]) + 80
-            h = 74 * len(b[1]) + 50
-            d.rounded_rectangle([60, y, 60 + w, y + h], 46, fill=(229, 231, 237))
+            h = lh * len(b[1]) + 50
+            x0 = W - 60 - w if b[0] == "me" else 60
+            d.rounded_rectangle([x0, y, x0 + w, y + h], 46, fill=BLUE if b[0] == "me" else grey_bubble)
             for i, t in enumerate(b[1]):
-                d.text((100, y + 26 + 74 * i), t, font=f, fill=INK)
+                d.text((x0 + 40, y + 26 + lh * i), t, font=f, fill=WHITE if b[0] == "me" else ink)
             y += h + 40
+        elif b[0] == "note":                                  # small grey text under the last bubble ("Delivered")
+            d.text((W - 60 - d.textlength(b[1], font=font("medium", 36)), y - 30), b[1], font=font("medium", 36),
+                   fill=(140, 144, 156))
+            y += 40
         elif b[0] == "hearts":
             n, label = b[1], b[2] if len(b) > 2 else ""
             h = 30 + 100 * ((n + 6) // 7) + 110
@@ -227,8 +249,17 @@ def chat(s):
         elif b[0] == "time":
             centred(d, y, b[1], font("medium", 38), (140, 144, 156))
             y += 80
-    d.rounded_rectangle([50, H - 190, W - 50, H - 90], 50, outline=(210, 213, 222), width=4)
-    d.text((100, H - 168), "Message", font=font("regular", 46), fill=(160, 164, 176))
+    d.rounded_rectangle([50, H - 190, W - 50, H - 90], 50, outline=(70, 72, 82) if dark else (210, 213, 222), width=4)
+    if s.get("draft"):                                        # something typed but not sent yet, with the send button
+        f = font("medium", 52)
+        d.text((100, H - 172), s["draft"], font=f, fill=ink)
+        cx = 100 + d.textlength(s["draft"], font=f) + 8
+        d.rectangle([cx, H - 170, cx + 5, H - 108], fill=BLUE)
+        d.ellipse([W - 150, H - 180, W - 70, H - 100], fill=BLUE)
+        d.polygon([(W - 110, H - 162), (W - 132, H - 136), (W - 88, H - 136)], fill=WHITE)
+        d.rectangle([W - 115, H - 140, W - 105, H - 116], fill=WHITE)
+    else:
+        d.text((100, H - 168), "Message", font=font("regular", 46), fill=(160, 164, 176))
     return im
 
 
@@ -243,6 +274,33 @@ def notice(s):
     centred(d, 560, s.get("big", ""), font("black", 200), WHITE)
     for i, ln in enumerate(s.get("lines", [])):
         centred(d, 1000 + 90 * i, ln, font("semibold", 64), INK)
+    return im
+
+
+def night_text(s):
+    """A dark lock screen: a big clock and one message banner. {"time": "3:00", "from": "Unknown",
+    "text": "who's still awake?", "date": "Tuesday, March 3", "ago": "now"}"""
+    im = base((14, 16, 34), (4, 4, 10))
+    d = ImageDraw.Draw(im)
+    for cx, cy, r, a in ((240, 700, 420, 46), (860, 1500, 480, 38)):           # a faint night glow
+        blob = Image.new("L", (W, H), 0)
+        ImageDraw.Draw(blob).ellipse([cx - r, cy - r, cx + r, cy + r], fill=a)
+        im.paste((60, 80, 170), (0, 0), blob.filter(ImageFilter.GaussianBlur(120)))
+    status(im, WHITE, label=s.get("status_label", "No Service"), time=s.get("time", "3:00"))
+    d = ImageDraw.Draw(im)
+    centred(d, 300, s.get("date", "Tuesday, March 3"), font("semibold", 54), (205, 212, 235))
+    centred(d, 360, s.get("time", "3:00"), font("bold", 330), WHITE)
+    y = 900
+    d.rounded_rectangle([50, y, W - 50, y + 300], 50, fill=(232, 234, 242))
+    d.rounded_rectangle([90, y + 40, 170, y + 120], 20, fill=GREEN)
+    d.ellipse([105, y + 58, 155, y + 100], fill=WHITE)
+    d.polygon([(112, y + 92), (106, y + 110), (128, y + 98)], fill=WHITE)
+    d.text((195, y + 48), s.get("from", "Unknown"), font=font("bold", 50), fill=INK)
+    d.text((W - 90 - d.textlength(s.get("ago", "now"), font=font("regular", 40)), y + 56), s.get("ago", "now"),
+           font=font("regular", 40), fill=(110, 114, 126))
+    d.text((90, y + 150), s.get("text", "who's still awake?"), font=font("medium", 64), fill=INK)
+    for cx in (170, W - 170):                                                         # flashlight and camera buttons
+        d.ellipse([cx - 70, H - 330, cx + 70, H - 190], fill=(40, 44, 62))
     return im
 
 
@@ -320,7 +378,7 @@ def town_map(s=None):
 
 
 KINDS = {"wifi_search": wifi_search, "calling": calling, "hotspot": hotspot, "chat": chat, "notice": notice,
-         "lock": lock, "town_map": town_map}
+         "lock": lock, "town_map": town_map, "night_text": night_text}
 
 
 def main():

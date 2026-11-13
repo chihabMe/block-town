@@ -74,6 +74,20 @@ Draft, 2026-11-12. Nothing has been generated yet. The narration is not affected
 | el-pigeon-coo | A pigeon cooing softly, a couple of coos | 1.5 s | The pigeon |
 | el-paper-rustle | Large paper map being unfolded and rustled | 1.5 s | Paper map |
 
+### Night and horror (first used in ep07)
+| File | Prompt | Length | Use |
+|---|---|---|---|
+| el-phone-buzz | A phone vibrating on a hard wooden table, two short buzzes, close and clear | 0.9 s | Phones buzzing, the 3 AM text |
+| el-text-tone-eerie | A soft single message tone, slightly detuned and eerie, quiet room, not a real phone brand tone | 0.6 s | A message arriving at night |
+| el-light-off | A light switch clicking off with a tiny electric hum cutting out | 0.4 s | Windows going dark |
+| el-clock-tick | One deep heavy tick of a big old clock | 0.5 s | Clock hands moving |
+| el-clock-bong | One deep clock bell strike with a long fading ring, dark and slow | 2.0 s | 3:00 strikes |
+| el-blanket-rustle | A thick blanket quickly pulled up over someone's head, soft fabric rustle | 0.8 s | Hiding under blankets |
+| el-lantern-creak | The metal handle of an old lantern creaking as it swings | 1.0 s | The watchman walking |
+| el-dog-whimper | A small dog whimpering softly, scared but cute | 0.8 s | A scared pet |
+| el-night-crickets-loop | Quiet suburban night: crickets, a faint distant breeze, seamless loop | 8.0 s | Under night street shots, very low |
+| el-drone-low-loop | Low dark ambient drone, uneasy, slowly pulsing, no melody, seamless loop | 6.0 s | Under scary moments, very low |
+
 ## 2. ep05 extras (only for this episode)
 | File | Prompt | Length | Use |
 |---|---|---|---|
@@ -85,6 +99,13 @@ Draft, 2026-11-12. Nothing has been generated yet. The narration is not affected
 | ep05-mayor-poster | Big poster unrolled and slapped onto metal with a clang | 1.2 s | Face on the tower (word 168) |
 | ep05-repair-laugh | Single friendly adult chuckle, short | 1.0 s | The repairman laughed |
 | ep05-wifi-river | Long flowing shimmer, like a river of sparkles traveling far away | 3.0 s | Every bar going to Grandma's street (word 202) |
+
+## 2b. ep07 extras (only for this episode)
+| File | Prompt | Length | Use |
+|---|---|---|---|
+| ep07-icecream-jingle | A distant music-box ice-cream van tune, simple original melody, slightly out of tune and eerie at night | 3.0 s | The truck still playing music; ice-cream music at night |
+| ep07-bin-rattle | A metal bin rattling hard with dozens of phones buzzing inside it | 1.5 s | "At 3 AM, the bin buzzed." |
+| ep07-heartbeat | Two slow heavy heartbeats, tense | 1.2 s | Her finger on send |
 
 ## 3. ep05: current cue → new sound
 | Moment (cues.json) | Now | New |
