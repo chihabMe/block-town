@@ -54,12 +54,14 @@ Paste this into the agent (prompt 1 in `docs/PROMPTS.md`):
 Make an "In this world / In this town" video with the block-town skill, in the Roblox look.
 Idea: pick one
 Episode folder: ~/videos/ep06
-Follow SKILL.md's seven gates and stop after each one for my answer.
+Follow SKILL.md's gates and stop after each one for my answer.
 ```
 
-The seven gates: three rules → the script → the voice → a design sheet → a still of every shot → the first 15 seconds
-finished → the full video. Blender builds and poses every frame and Three.js draws it: a 66-second episode takes
-about 10–12 minutes from frames to finished MP4 on a laptop (Blender's own renderer took about 3 hours).
+The gates: research (optional, Apify) → five ideas to pick from → three scripts to pick from → the voice → a design
+sheet → a still of every shot → four opening variants to pick from → a fast draft of the whole video, with review
+rounds → the final full-quality render. Blender builds and poses every frame and Three.js draws it: a 66-second
+episode takes about 10–12 minutes from frames to finished MP4 on a laptop at full size (Blender's own renderer took
+about 3 hours); the 540x960 draft is quicker.
 
 ## Try it without making anything new
 

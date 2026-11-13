@@ -2,50 +2,65 @@
 
 Paste a prompt into Claude Code or Codex with the block-town skill installed. `{…}` are yours to fill in. The skill
 folder is `SKILL`; the episode folder is `EPISODE` (for example `~/videos/ep06-shadows`). Rules and numbers come from
-`SKILL.md`, `docs/SCRIPT.md`, `docs/ROBLOX_LOOK.md` and `docs/VOICE.md`. The block-look prompts that used to be here
-are in `docs/GUIDE.md`.
+`SKILL.md`, `docs/RESEARCH.md`, `docs/SCRIPT.md`, `docs/ROBLOX_LOOK.md` and `docs/VOICE.md`. The block-look prompts
+that used to be here are in `docs/GUIDE.md`.
 
 ## 1. Make the whole video (the master prompt)
 
 ```
 Make an "In this world / In this town" video with the block-town skill, in the Roblox look.
-Idea: {a rule, a theme, or "pick one"}
+Idea: {a rule, a theme, or "research and pick"}
 Episode folder: {EPISODE}
-Follow SKILL.md's seven gates and stop after each one for my answer:
-1 three rules, 2 script (two options + critic scores), 3 voice (free Fish take + voice_check numbers),
-4 design sheet, 5 contact sheet of every shot, 6 the first ~15 s finished, 7 the full video.
-Offer 2-3 options wherever there is a real creative choice and say which you recommend.
-Don't spend money (paid voice) or download anything without asking me first.
+Research folder: {e.g. ~/Documents/projects/tiktok-videos/research/in-this-world, or "skip research"}
+Follow SKILL.md's gates and stop after each one for my answer:
+0 research (tell me the Apify cost first), 1 five ideas, 2 three scripts, 3 voice (free Fish take),
+4 design sheet, 5 contact sheet, 6 {4} opening variants as drafts, 7 a fast draft of the whole video and fix rounds,
+8 the final full-quality render once I approve the draft.
+Mark your recommended pick at every choice; if I say "go with yours", take it.
+Don't spend money (Apify, paid voice, ElevenLabs) or download anything without asking me first.
 ```
 
-## 2. Rule ideas (gate 1)
+## 2. Research (gate 0)
 
 ```
-Give me three "In this world / In this town" rules for {theme or "anything"}, each in a different mood (comedy,
-horror, heart). For each: the rule as spoken (10 words or fewer), the underdog it hurts, the comment loophole, a twist
-that is fair from the first line, and the landmark that shows the rule (big, simple, one strong colour). Score each
-on docs/SCRIPT.md's five tests. Don't reuse any rule, joke or twist from other creators.
+Research the "In this town / In this world" niche for new ideas. Follow docs/RESEARCH.md.
+Read {research folder}'s newest TRENDS_*.md and ideas/RULE_BANK.md first.
+Plan an Apify run (clockworks/tiktok-scraper, no video downloads): the queries, how many results, and the cost.
+Wait for my yes, then run it, save the raw JSON under raw/{date}/, and write TRENDS_{date}.md: what changed, what
+is winning (with numbers), what is saturated, the taken rules, the hook shapes that work. Give me the findings in
+about 10 lines.
 ```
 
-## 3. Script (gate 2)
+## 3. Ideas (gate 1)
 
 ```
-Write the script for rule: {rule}. Follow docs/SCRIPT.md: 60 seconds, about 240 words, one sentence a line,
+Give me {5} "In this world / In this town" ideas for {theme, "anything", or "what the research says"}, following
+docs/RESEARCH.md: rule as spoken (10 words or fewer), mood (at least three moods across them), a two-line story
+(underdog, tries, twist), the landmark, why now (a pattern from the research, with a number), fresh (not taken,
+not in RULE_BANK.md), and a score on docs/SCRIPT.md's five tests. One table, then your recommended pick and why in
+one line. Add all of them to RULE_BANK.md with today's date.
+```
+
+## 4. Scripts (gate 2)
+
+```
+Write three scripts for idea {n}. Follow docs/SCRIPT.md: 60 seconds, about 240 words, one sentence a line,
 the 8 beats with "everyone obeys" (a list of three) and "punished first", a callback and a fair twist whose clue is
-hidden in beat 4. Write option A in full and option B as a different ending, score A on the 12-point critic list,
-fix anything under 8, and write it all to EPISODE/SCRIPT.md (pattern: examples/ep05-wifi/SCRIPT.md).
-Put A in EPISODE/script.txt. List what the pictures need: landmark, signs, props, tags, cast roles.
+hidden in beat 4. A, B and C must differ in twist, tone or underdog. Score each on the 12-point critic list, fix
+anything under 8, and write all three to EPISODE/SCRIPT.md (pattern: examples/ep05-wifi/SCRIPT.md) with a beat table
+for each. Recommend one. Put my pick (or yours, if I say "go with yours") in EPISODE/script.txt and list what the
+pictures need: landmark, signs, props, tags, cast roles.
 ```
 
-## 4. Voice (gate 3)
+## 5. Voice (gate 3)
 
 ```
 Make the narration for EPISODE with the free Fish model: copy examples/ep05-wifi/vo_config.json, run vo.py,
-words.py and voice_check.py. Tell me the length, words a minute, the voice_check table, and any guessed words
-other than numbers. Send me vo/voice.wav. Don't use the paid model.
+words.py, voice_check.py and level_voice.py. Tell me the length, words a minute, the voice_check table, and any
+guessed words other than numbers. Send me vo/voice.wav. Don't use the paid model.
 ```
 
-## 5. Design sheet (gate 4)
+## 6. Design sheet (gate 4)
 
 ```
 Build every new piece this script needs (landmark, signs, posters, props, costumes, tags, new characters) in
@@ -54,40 +69,51 @@ Render the design stills, look at them, fix anything cut off or hidden, and send
 per piece. Offer 2-3 options for any piece where the design is a real choice.
 ```
 
-## 6. Shots and stills (gate 5)
+## 7. Shots and stills (gate 5)
 
 ```
 Write EPISODE/episode.py: one shot per clause (0.7-2.5 s), cut with wcut(word index), tags and faces popping on
-the word with wpop(index), the landmark in the first 2 s, a wide shot every 6-10 shots
+the word with wpop(index), focus() in every shot, the landmark in the first 2 s, a wide shot every 6-10 shots
 (docs/ROBLOX_LOOK.md section 5; pattern: examples/ep05-wifi/episode.py). Run check until it passes with no
-shot over 2.5 s. Render stills in groups of about 12 shots, look at every one against docs/ROBLOX_LOOK.md section 6,
-fix and re-render the bad ones (at least two rounds), then send me the contact sheet with a line per group of shots
-and a list of anything still weak.
+shot over 2.5 s and still_check.txt is clean. Render stills in groups of about 12 shots, look at every one against
+docs/ROBLOX_LOOK.md section 6, fix and re-render the bad ones (at least two rounds), then send me the contact sheet
+with a line per group of shots and a list of anything still weak.
 ```
 
-## 7. Hook (gate 6)
+## 8. Opening variants (gate 6)
 
 ```
-Render the first ~15 s of EPISODE with render_threejs.sh EPISODE 0 F1 (F1 just before a cut), write the sound
-cues for it (docs/SOUND.md: ElevenLabs sounds from sfx/ELEVENLABS_LIST.md if I have a key, tell me the credit cost
-first; Pixabay otherwise), then finish.py with finish.json {"captions": "karaoke", "voice": "vo/voice_level.wav",
-"loudness": "static", "music_loop": 20.5, "music_db": -9} and my music file {path or "none"}.
-Rename the MP4s to *_hook*.mp4. Check frames across it (every tag visible, nothing static, screens real) and that the
-short-term loudness stays within ±1 dB of -14 LUFS, and tell me what you could not check.
+Run preflight.py on EPISODE and fix anything missing. Then make {4} opening variants of the first ~15 s with
+openings.py new (same words; different first image, landmark reveal, camera or first action, one line each on what
+differs). For each: cut its episode.py down to the hook shots and change them, run check until still_check.txt is
+clean, render_threejs.sh VARIANT --draft, cues for the hook (Pixabay, or ElevenLabs only after telling me the
+credit cost), finish.py VARIANT --draft. Then openings.py grid. Look at frames from every variant before sending.
+Send me the grid and each draft, and say which you recommend and why.
 ```
 
-## 8. Full video (gate 7)
+## 9. Draft of the whole video (gate 7)
 
 ```
-Render every frame of EPISODE with render_threejs.sh in the background (~10 min), then finish.py (clean file +
-music file). Check the length, the loudness (about -14 LUFS, short-term within ±1 dB) and one frame per shot. If I
-approve posting, ask me before making the paid voice take; after it, run words.py, level_voice.py, check,
-render_threejs.sh and finish again.
+Move opening {X}'s shots into EPISODE/episode.py, run check, and delete openings/. Then render the whole video as a
+draft: render_threejs.sh EPISODE --draft (in the background), cues for the whole video, finish.py EPISODE --draft.
+Check one frame per shot (every tag visible, nothing static, screens real) and the loudness (short-term within
+±1 dB of -14 LUFS), and tell me what you could not check. Send me <name>_draft.mp4.
 ```
 
-## 9. Notes on a cut
+## 10. Notes on a draft (gate 7, each review round)
 
 ```
-Notes on EPISODE: {shot numbers from the contact sheet and what is wrong}. Fix only those shots, re-render their
-stills, show me before/after, and don't touch other shots.
+Notes on EPISODE's draft: {times or shot numbers and what is wrong}. Fix only those shots, re-render just their
+frames with render_threejs.sh EPISODE --draft F0 F1, run finish.py EPISODE --draft, show me before/after stills of
+the fixed shots and the new draft. Don't touch other shots.
+```
+
+## 11. Final render (gate 8)
+
+```
+The draft is approved. Run preflight.py EPISODE --final. Ask me whether to make the paid voice take (if yes: vo.py
+with the paid model, words.py, level_voice.py, check, and one more draft for me to approve). Then set finish.json
+"render_fps": 240, "blur": 4 (and the grade if the story has a turn), run render_threejs.sh EPISODE in the
+background and finish.py EPISODE with my music file {path or "none"}. Check the length, the loudness and one frame
+per shot, then send me both MP4s. After I accept, delete threejs/, frames/ and frames_draft/.
 ```

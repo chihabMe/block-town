@@ -3,13 +3,9 @@
 A richer town, more expressive faces, dressed characters, a camera pack and a film-like picture. Old episode code runs
 unchanged and gets the new look; the new pieces are opt-in calls.
 
-The old kit stays on branch `roblox-look` (folder `block-town-video`). This branch lives in its own folder,
-`block-town-video-v2` (a git worktree), so both can render the same episode side by side:
-
-```bash
-# old world                                         # new world
-bash block-town-video/blockworld/render_threejs.sh EP        bash block-town-video-v2/blockworld/render_threejs.sh EP
-```
+World v2 was made on branch `world-v2` (folder `block-town-video-v2`, a git worktree) and merged into `main` on
+2026-11-13, together with the research / five ideas / opening variants / draft-and-final flow from `roblox-look`.
+`build_town(..., detail=False)` and `TJ_QUERY="post=0"` still give the v1 street and picture (see Switches).
 
 ## What changed
 

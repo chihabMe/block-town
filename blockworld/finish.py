@@ -4,7 +4,11 @@
     python3 blockworld/finish.py EPISODE_DIR
     python3 blockworld/finish.py EPISODE_DIR --music ~/Music/numbers.mp3     (same as "music" in finish.json)
 
+    python3 blockworld/finish.py EPISODE_DIR --draft     (review copy: frames_draft/ -> <name>_draft.mp4)
+
 --captions writes captions.ass and prints each sound cue. It does not encode.
+--draft uses the frames from render_threejs.sh EPISODE --draft (540x960, 30 fps), skips blur and grade, encodes fast,
+and writes <name>_draft.mp4 (and <name>_draft_music.mp4 with music). Captions are the same file, scaled down.
 The full command needs frames/f_####.jpg and vo/voice.wav, and writes EPISODE_DIR/<folder-name>.mp4.
 
 cues.json entries, times in seconds:
@@ -200,9 +204,10 @@ def video_chain(conf, start, plain=False):
     return chain, (",".join(look), ramp), out_fps
 
 
-def encode(ep, out, ass, voice, resolved, music=None, static=False, conf=None, start=None, plain=False):
+def encode(ep, out, ass, voice, resolved, music=None, static=False, conf=None, start=None, plain=False,
+           frames_dir="frames", fast=False):
     conf = conf or {}
-    frames = ep / "frames" / "f_%04d.jpg"
+    frames = ep / frames_dir / "f_%04d.jpg"
     chain, grade, out_fps = video_chain(conf, start, plain)
     cmd = ["ffmpeg", "-y", "-loglevel", "error", "-framerate", str(int(conf.get("render_fps", 30))), "-i", str(frames),
            "-i", str(voice)]
@@ -240,7 +245,8 @@ def encode(ep, out, ass, voice, resolved, music=None, static=False, conf=None, s
         video = f"[0]{pre},ass={esc(ass)}:fontsdir={esc(FONTS)}[vid];"
     cmd += ["-filter_complex", video + mix, "-r", f"{out_fps:g}",
             "-map", "[vid]", "-map", "[a]",
-            "-c:v", "libx264", "-preset", "slow", "-crf", "17", "-maxrate", "6M", "-bufsize", "12M", "-pix_fmt", "yuv420p",
+            "-c:v", "libx264", *(["-preset", "veryfast", "-crf", "23"] if fast else
+                                 ["-preset", "slow", "-crf", "17", "-maxrate", "6M", "-bufsize", "12M"]), "-pix_fmt", "yuv420p",
             "-c:a", "aac", "-b:a", "256k", "-shortest", str(out)]
     subprocess.run(cmd, check=True)
     print("wrote", out, f"({fix_loudness(out):.1f} LUFS)")
@@ -273,8 +279,14 @@ def main():
         subprocess.run([sys.executable, "-I", str(Path(__file__).resolve().parent / "level_voice.py"), str(ep)],
                        check=True)                     # levelled narration missing: make it from voice.wav
     static = conf.get("loudness") == "static"           # one fixed gain for the whole mix: the voice never dips
-    if not (ep / "frames" / "f_0000.jpg").exists():
-        sys.exit(f"no frames in {ep / 'frames'}. Render first, or use --captions.")
+    draft = "--draft" in sys.argv                       # review copy from frames_draft/: 30 fps, no blur, no grade
+    fdir, tag = ("frames_draft", "_draft") if draft else ("frames", "")
+    if draft:
+        conf = {k: v for k, v in conf.items() if k != "grade"}
+        conf.update(render_fps=30, blur=1)
+    if not (ep / fdir / "f_0000.jpg").exists():
+        sys.exit(f"no frames in {ep / fdir}. Render first"
+                 f"{' (render_threejs.sh EPISODE --draft)' if draft else ''}, or use --captions.")
     if not voice.exists():
         sys.exit(f"no narration at {voice}")
     if static:
@@ -290,8 +302,9 @@ def main():
             rel.append((src, t, round(gain, 4), length))
         print(f"static mix: speech at {speech:.1f} LUFS momentary; effects set relative to it")
         resolved = rel
-    encode(ep, ep / f"{ep.name}.mp4", ass, voice, resolved, static=static, conf=conf, start=start)
-    if "--plain" in sys.argv:                           # the same frames without blur or grade, at 30 fps
+    out = dict(static=static, conf=conf, start=start, frames_dir=fdir, fast=draft)
+    encode(ep, ep / f"{ep.name}{tag}.mp4", ass, voice, resolved, **out)
+    if "--plain" in sys.argv and not draft:             # the same frames without blur or grade, at 30 fps
         encode(ep, ep / f"{ep.name}_plain.mp4", ass, voice, resolved, static=static, conf=conf, start=start, plain=True)
     if "--music" in sys.argv:
         conf["music"] = sys.argv[sys.argv.index("--music") + 1]
@@ -301,11 +314,11 @@ def main():
         if not song.exists():
             sys.exit(f"music file not found: {song}")
         start_s = float(conf.get("music_start", 0))
-        length = len(list((ep / "frames").glob("f_*.jpg"))) / int(conf.get("render_fps", 30))
+        length = len(list((ep / fdir).glob("f_*.jpg"))) / int(conf.get("render_fps", 30))
         gain = mean_db(voice) + float(conf.get("music_db", -4)) - mean_db(song)
         print(f"music: {song.name}, {gain:+.1f} dB to sit {conf.get('music_db', -4)} dB under the voice")
-        encode(ep, ep / f"{ep.name}_music.mp4", ass, voice, resolved,
-               (song, gain, start_s, length, float(conf.get("music_loop", 0))), static=static, conf=conf, start=start)
+        encode(ep, ep / f"{ep.name}{tag}_music.mp4", ass, voice, resolved,
+               (song, gain, start_s, length, float(conf.get("music_loop", 0))), **out)
 
 
 if __name__ == "__main__":
