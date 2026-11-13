@@ -164,6 +164,9 @@ function makeMat(name, d) {
       .replace("#include <map_fragment>", "#include <map_fragment>\n" + frag)
       .replace("#include <lights_fragment_end>", "#include <lights_fragment_end>\n reflectedLight.directSpecular *= specK; reflectedLight.indirectSpecular *= specK;");
   };
+  if (d.alpha !== undefined && d.alpha < 0.999) {   // see-through (a ghost, a spotlight beam)
+    m.transparent = true; m.opacity = d.alpha; m.depthWrite = false;
+  }
   m.customProgramCacheKey = () => name;
   return m;
 }

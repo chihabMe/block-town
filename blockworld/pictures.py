@@ -20,6 +20,7 @@ chat extras: ["me", ["line"]] is your own blue bubble on the right, ["note", "De
   "text_size": 76 bigger bubble text (default 58),
   "who": "unknown" a grey "?" contact picture.
   {"kind": "town_map", "title": "TOWN MAP"}                                    the folded paper map
+  {"kind": "class_photo", "title": "CLASS 4B", "empty": 3}                     a printed class photo, one empty chair
 "avatar": {"face": "smile", "skin": [235, 200, 168], "hair": [222, 226, 232]} draws any contact picture.
 
 Phone screens are 1080 x 2216 (big_phone's 5.6 x 11.5 stud screen). big_phone's 3D loading spinner turns at 37.8 %
@@ -377,8 +378,72 @@ def town_map(s=None):
     return im
 
 
+def class_photo(s=None):
+    """A school class photo (printed, 1500 x 1080): a back row standing, a front row on chairs, one chair EMPTY in
+    the middle of the front row ("empty": its index, or -1 for none). "title" is printed on the white border."""
+    import random
+    s = s or {}
+    rng = random.Random(s.get("seed", 5))
+    w, h = 1500, 1080
+    im = Image.new("RGB", (w, h), WHITE)
+    d = ImageDraw.Draw(im)
+    x0, y0, x1, y1 = 50, 50, w - 50, h - 170
+    bg = Image.new("RGB", (x1 - x0, y1 - y0), (70, 110, 170))                 # the photographer's mottled backdrop
+    bd = ImageDraw.Draw(bg)
+    for _ in range(260):
+        cx, cy, r = rng.uniform(0, x1 - x0), rng.uniform(0, y1 - y0), rng.uniform(40, 140)
+        c = rng.choice([(78, 120, 182), (62, 100, 160), (90, 132, 190)])
+        bd.ellipse([cx - r, cy - r, cx + r, cy + r], fill=c)
+    bg = bg.filter(ImageFilter.GaussianBlur(28))
+    im.paste(bg, (x0, y0))
+    d.rectangle([x0, y1 - 120, x1, y1], fill=(150, 116, 80))                  # the floor
+    skins = [(240, 200, 160), (201, 138, 90), (154, 91, 52), (228, 181, 138), (122, 74, 44), (235, 200, 168)]
+    hairs = [(30, 23, 20), (74, 42, 24), (46, 28, 18), (200, 98, 28), (226, 183, 85)]
+    shirts = [(47, 181, 168), (242, 138, 30), (138, 79, 181), (47, 111, 224), (59, 181, 74), (255, 197, 51),
+              (232, 139, 168), (0, 163, 196), (194, 78, 138)]
+
+    def kid(cx, top, size, seated):
+        sh = rng.choice(shirts)
+        skin = rng.choice(skins)
+        bw = size * 0.9
+        d.rounded_rectangle([cx - bw / 2, top + size * 0.86, cx + bw / 2, top + size * 2.3], size * 0.18, fill=sh)
+        for ax in (cx - bw / 2 - size * 0.3, cx + bw / 2 - size * 0.02):        # arms by the sides
+            d.rounded_rectangle([ax, top + size * 0.9, ax + size * 0.32, top + size * 2.0], size * 0.1, fill=sh)
+            d.rounded_rectangle([ax, top + size * 1.85, ax + size * 0.32, top + size * 2.15], size * 0.1, fill=skin)
+        hair = rng.choice(hairs)                                                # a head without the contact circle
+        hs = Image.new("RGBA", (int(size), int(size)), (0, 0, 0, 0))
+        hd = ImageDraw.Draw(hs)
+        hd.rounded_rectangle([size * 0.14, size * 0.16, size * 0.86, size * 0.92], size * 0.16, fill=skin)
+        hd.pieslice([size * 0.1, size * 0.02, size * 0.9, size * 0.62], 180, 360, fill=hair)
+        if rng.random() < 0.25:
+            hd.ellipse([size * 0.38, -size * 0.06, size * 0.62, size * 0.16], fill=hair)
+        fc = Image.open(FACES / f"{rng.choice(['smile', 'happy', 'laugh', 'smile'])}.png").convert("RGBA")
+        fc = fc.resize((round(size * 0.6),) * 2)
+        hs.alpha_composite(fc, (round(size * 0.2), round(size * 0.34)))
+        im.paste(hs, (int(cx - size / 2), int(top)), hs)
+
+    n = s.get("per_row", 7)
+    empty = s.get("empty", n // 2)
+    gap = (x1 - x0) / (n + 0.4)
+    for i in range(n + 1):                                                      # back row, standing
+        kid(x0 + gap * (i + 0.2), y0 + 120, 150, False)
+    chair = (60, 64, 84)
+    for i in range(n):                                                          # front row, on chairs
+        cx = x0 + gap * (i + 0.7)
+        d.rounded_rectangle([cx - 80, y1 - 330, cx + 80, y1 - 120], 16, fill=chair)        # chair back
+        d.rounded_rectangle([cx - 92, y1 - 140, cx + 92, y1 - 112], 10, fill=(80, 85, 108))  # seat
+        for lx in (-70, 62):
+            d.rectangle([cx + lx, y1 - 112, cx + lx + 10, y1 - 40], fill=(50, 52, 66))
+        if i != empty:
+            kid(cx, y1 - 470, 160, True)
+    d.text((x0 + 10, y1 + 34), s.get("title", "CLASS 4B"), font=font("black", 64), fill=(40, 44, 60))
+    d.text((x1 - 330, y1 + 50), s.get("year", "SCHOOL PHOTO"), font=font("bold", 40), fill=(120, 124, 140))
+    return im
+
+
 KINDS = {"wifi_search": wifi_search, "calling": calling, "hotspot": hotspot, "chat": chat, "notice": notice,
-         "lock": lock, "town_map": town_map, "night_text": night_text}
+         "lock": lock, "town_map": town_map, "night_text": night_text,
+         "class_photo": class_photo}
 
 
 def main():
