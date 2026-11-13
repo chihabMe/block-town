@@ -1,0 +1,10 @@
+{
+  "name": "block-town-threejs",
+  "private": true,
+  "description": "Three.js renderer for block-town episodes (scene.html + capture.mjs)",
+  "type": "module",
+  "dependencies": {
+    "puppeteer-core": "^25.17.0",
+    "three": "0.187.0"
+  }
+}

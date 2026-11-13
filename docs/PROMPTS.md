@@ -68,17 +68,21 @@ and a list of anything still weak.
 ## 7. Hook (gate 6)
 
 ```
-Render the frames of the first ~15 s of EPISODE, ending just before a cut, then finish.py with
-finish.json {"captions": "karaoke", "music_loop": 20.5, "music_db": -9} and my music file {path or "none"}.
-Rename the MP4s to *_hook*.mp4. Check frames across it and its loudness, and tell me what you could not check.
+Render the first ~15 s of EPISODE with render_threejs.sh EPISODE 0 F1 (F1 just before a cut), write the sound
+cues for it (docs/SOUND.md: ElevenLabs sounds from sfx/ELEVENLABS_LIST.md if I have a key, tell me the credit cost
+first; Pixabay otherwise), then finish.py with finish.json {"captions": "karaoke", "voice": "vo/voice_level.wav",
+"loudness": "static", "music_loop": 20.5, "music_db": -9} and my music file {path or "none"}.
+Rename the MP4s to *_hook*.mp4. Check frames across it (every tag visible, nothing static, screens real) and that the
+short-term loudness stays within ±1 dB of -14 LUFS, and tell me what you could not check.
 ```
 
 ## 8. Full video (gate 7)
 
 ```
-Render every frame of EPISODE with render_all.sh in the background, then finish.py (clean file + music file).
-Check the length, the loudness (about -14 LUFS) and frames across the whole video. If I approve posting,
-ask me before making the paid voice take; after it, run words.py, check, re-render and finish again.
+Render every frame of EPISODE with render_threejs.sh in the background (~10 min), then finish.py (clean file +
+music file). Check the length, the loudness (about -14 LUFS, short-term within ±1 dB) and one frame per shot. If I
+approve posting, ask me before making the paid voice take; after it, run words.py, level_voice.py, check,
+render_threejs.sh and finish again.
 ```
 
 ## 9. Notes on a cut

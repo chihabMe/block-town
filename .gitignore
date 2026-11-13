@@ -16,3 +16,9 @@ examples/*/vo/voice_raw.mp3
 examples/**/stills/
 examples/**/frames/
 examples/*/speedtest/
+
+# Three.js renderer dependencies (npm install in blockworld/threejs)
+blockworld/threejs/node_modules/
+episodes/
+examples/*/vo/voice_level.wav
+examples/*/pictures/

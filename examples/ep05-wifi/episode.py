@@ -10,7 +10,7 @@ Made through all seven gates of SKILL.md. Read it with docs/ROBLOX_LOOK.md:
 from anim import *
 from props import car
 from roblox import rule_sign
-from rprops import (bars, beam, big_phone, bus, door, hand_box, hivis, phone_in_hand, pigeon, poster, sash, top_hat,
+from rprops import (bar_token, bars, beam, big_phone, bus, door, hand_box, hivis, phone_in_hand, pigeon, poster, sash, top_hat,
                     wifi_tower)
 
 build_town("BE NICE", ("SIGNAL SHOP", "NICE CAFE"), style="roblox")
@@ -37,15 +37,17 @@ LUNCH = hand_box(MAX)
 BEAM = beam()
 
 # phone inserts, far from the street
-PH_SEARCH = big_phone(0, -380, 8, ("Searching...",), 0)
-PH_CALL = big_phone(40, -380, 8, ("Calling", "Grandma..."), 0)
-PH_SIGNAL = big_phone(80, -380, 8, ("SIGNAL 100%", "Sharing with", "312 phones"), 4, spinner=False, size=0.55)
-PH_HEARTS = big_phone(120, -380, 8, ("Grandma:", "♥ ♥ ♥", "x47"), 0, spinner=False, size=0.8, ink="#E8264F")
+PH_SEARCH = big_phone(0, -380, 8, screen="search")        # pictures from pictures.json
+PH_CALL = big_phone(40, -380, 8, screen="call")
+PH_SIGNAL = big_phone(80, -380, 8, screen="signal", spinner=False)
+PH_HEARTS = big_phone(120, -380, 8, screen="hearts", spinner=False)
 
 # ---------------------------------------------------------------- tags and bubbles
 BX, BXman = bars(0, x_mark=True), bars(0, x_mark=True)
 B4 = [bars(4) for _ in range(7)]
 B1 = bars(1)
+B3, B2 = bars(3), bars(2)                             # the countdown on Max's tag in s34
+TOKENS = [bar_token(i) for i in range(4)]             # his bars flying away in s34
 T4K = card(["4K"], 1.1, "#FFD84A")
 TLOAD = card(["LOADING...", "10 MIN"], 0.55, "#FF5A4F")
 TMBPS = card(["1000 Mbps"], 0.42, "#3BE37E")
@@ -98,8 +100,10 @@ def s03(t, d, T):   # the nicer you are.
 
 
 def s04(t, d, T):   # You see, every phone
-    stand(KID, (3.0, 99.0, ROAD), 0, "smile", T)
-    shot((4.6 - t * 0.5, 91.5 + t * 0.8, 6.6), (7.3, 104, 8.0), 44)
+    # Wide enough for the whole BE NICE sign (a 10.6-stud board needs ~25 studs of distance in a 9:16 frame),
+    # with the kid in front of it pointing up at it.
+    stand(KID, (5.6, 97.2, ROAD), -20, "smile", T, armR=(150, 18), head=(0, 12))
+    shot((1.4 + t * 0.3, 78.5 + t * 1.0, 4.2), (6.8, 104, 7.2), 50)
 
 
 def s05(t, d, T):   # listens to the giant tower.
@@ -308,12 +312,26 @@ def s33(t, d, T):   # It was the strongest in town.
 
 # ---------------------------------------------------------------- the twist
 def s34(t, d, T):   # I was just giving every bar away.
-    stand(MAX, MAX_AT, -90, "shock", T)
-    BEAM.location = (RX - 0.6, 36, 5.6)
-    BEAM.rotation_euler = (0, 0, math.radians(180))
-    BEAM.scale = (1 + 32 * smooth(clamp(t / 0.9)), 1, 1)
-    stand(GRAN, (LX, 36, WALK), 90, "happy", T)
-    shot((6, 13, 11), (3, 36, 4.0), 60)
+    # Show the idea literally: close on Max, his four bars pop out of his tag one by one and fly off toward
+    # Grandma's side of the street while the tag counts down 4 -> 3 -> 2 -> 1 -> X. (A long beam between two small
+    # figures read as "a blue line" to viewers.)
+    stand(MAX, MAX_AT, 0, "shock", T, head=(0, 6))
+    front(MAX, 9.5, 46, push=0.7, t=t)
+    m = town.cam.rotation_euler.to_matrix()
+    right, up = m.col[0], m.col[1]
+    tag = over(MAX, 0.45)
+    starts = [0.22 + 0.2 * k for k in range(4)]                 # tallest bar leaves first
+    gone = sum(1 for s0 in starts if t >= s0)
+    put((B4[0], B3, B2, B1, BX)[gone], tag, 0.55)
+    for k, s0 in enumerate(starts):
+        i = 3 - k
+        if t < s0:
+            continue
+        f = clamp((t - s0) / 0.75)
+        e = smooth(f)
+        home = tag + right * ((-0.81 + i * 0.54) * 0.55) + up * 0.2
+        p = home - right * (6.5 * e) + up * (1.8 * math.sin(e * math.pi * 0.9))
+        put(TOKENS[i], p, 0.55 * (1 + 0.5 * e) * (1 - clamp((f - 0.85) / 0.15)))
 
 
 def s35(t, d, T):   # To Grandma's whole street.

@@ -1,0 +1,306 @@
+[
+ {
+  "sfx": "el-street-day-loop.mp3",
+  "volume": 0.07,
+  "shot": "s01",
+  "until": "end"
+ },
+ {
+  "sfx": "el-tower-hum-loop.mp3",
+  "volume": 0.16,
+  "shot": "s01",
+  "until": "s03"
+ },
+ {
+  "sfx": "el-tower-hum-loop.mp3",
+  "volume": 0.16,
+  "shot": "s05",
+  "until": "s06"
+ },
+ {
+  "sfx": "el-wifi-zap.mp3",
+  "volume": 0.3,
+  "shot": "s02",
+  "offset": 0.05
+ },
+ {
+  "sfx": "el-spinner-loop.mp3",
+  "volume": 0.22,
+  "shot": "s17",
+  "until": "s18"
+ },
+ {
+  "sfx": "el-spinner-loop.mp3",
+  "volume": 0.22,
+  "shot": "s39",
+  "until": "s40"
+ },
+ {
+  "sfx": "el-whoosh-cut.mp3",
+  "volume": 0.22,
+  "shot": "s02",
+  "offset": -0.08
+ },
+ {
+  "sfx": "el-whoosh-cut.mp3",
+  "volume": 0.22,
+  "shot": "s05",
+  "offset": -0.08
+ },
+ {
+  "sfx": "el-whoosh-cut.mp3",
+  "volume": 0.22,
+  "shot": "s28",
+  "offset": -0.08
+ },
+ {
+  "sfx": "el-whoosh-cut.mp3",
+  "volume": 0.22,
+  "shot": "s30",
+  "offset": -0.08
+ },
+ {
+  "sfx": "el-whoosh-cut.mp3",
+  "volume": 0.22,
+  "shot": "s37",
+  "offset": -0.08
+ },
+ {
+  "sfx": "el-whoosh-zoom.mp3",
+  "volume": 0.25,
+  "shot": "s16",
+  "offset": -0.08
+ },
+ {
+  "sfx": "el-power-up.mp3",
+  "volume": 0.4,
+  "say": "nicer"
+ },
+ {
+  "sfx": "ep05-4k-sparkle.mp3",
+  "volume": 0.45,
+  "say": "4k"
+ },
+ {
+  "sfx": "el-signal-up.mp3",
+  "volume": 0.3,
+  "say": "4k",
+  "offset": 0.1
+ },
+ {
+  "sfx": "el-buffering-stall.mp3",
+  "volume": 0.35,
+  "say": "ten"
+ },
+ {
+  "sfx": "ep05-baby-giggle.mp3",
+  "volume": 0.4,
+  "say": "fastest"
+ },
+ {
+  "sfx": "el-signal-up.mp3",
+  "volume": 0.28,
+  "say": "fastest",
+  "offset": 0.15
+ },
+ {
+  "sfx": "el-tag-pop.mp3",
+  "volume": 0.45,
+  "say": "even"
+ },
+ {
+  "sfx": "ep05-honk-held-back.mp3",
+  "volume": 0.35,
+  "say": "honks"
+ },
+ {
+  "sfx": "el-bubble-pop.mp3",
+  "volume": 0.45,
+  "say": "cuts"
+ },
+ {
+  "sfx": "el-bus-idle.mp3",
+  "volume": 0.25,
+  "shot": "s13"
+ },
+ {
+  "sfx": "el-bubble-pop.mp3",
+  "volume": 0.45,
+  "say": "bus"
+ },
+ {
+  "sfx": "ep05-yell.mp3",
+  "volume": 0.5,
+  "say": "yelled"
+ },
+ {
+  "sfx": "el-impact-boom.mp3",
+  "volume": 0.42,
+  "say": "yelled"
+ },
+ {
+  "sfx": "el-buffering-stall.mp3",
+  "volume": 0.32,
+  "say": "froze"
+ },
+ {
+  "sfx": "el-tag-pop.mp3",
+  "volume": 0.45,
+  "say": "max"
+ },
+ {
+  "sfx": "el-no-signal.mp3",
+  "volume": 0.3,
+  "say": "zero"
+ },
+ {
+  "sfx": "el-searching.mp3",
+  "volume": 0.35,
+  "say": "searching"
+ },
+ {
+  "sfx": "el-footsteps-sneakers.mp3",
+  "volume": 0.3,
+  "shot": "s18"
+ },
+ {
+  "sfx": "el-record-scratch.mp3",
+  "volume": 0.45,
+  "say": "and",
+  "after": "searching"
+ },
+ {
+  "sfx": "el-no-signal.mp3",
+  "volume": 0.32,
+  "say": "connect"
+ },
+ {
+  "sfx": "el-door-open.mp3",
+  "volume": 0.3,
+  "say": "held"
+ },
+ {
+  "sfx": "el-tag-pop.mp3",
+  "volume": 0.45,
+  "say": "fifty"
+ },
+ {
+  "sfx": "el-no-signal.mp3",
+  "volume": 0.28,
+  "say": "zero",
+  "after": "held"
+ },
+ {
+  "sfx": "ep05-lunch-tray.mp3",
+  "volume": 0.4,
+  "say": "lunch",
+  "after": "held"
+ },
+ {
+  "sfx": "el-tag-pop.mp3",
+  "volume": 0.45,
+  "say": "month"
+ },
+ {
+  "sfx": "el-no-signal.mp3",
+  "volume": 0.28,
+  "say": "zero",
+  "after": "lunch"
+ },
+ {
+  "sfx": "el-bubble-pop.mp3",
+  "volume": 0.45,
+  "say": "sorry"
+ },
+ {
+  "sfx": "el-sad-trombone.mp3",
+  "volume": 0.4,
+  "say": "still"
+ },
+ {
+  "sfx": "ep05-mayor-poster.mp3",
+  "volume": 0.5,
+  "say": "face"
+ },
+ {
+  "sfx": "el-impact-boom.mp3",
+  "volume": 0.45,
+  "say": "face"
+ },
+ {
+  "sfx": "el-gasp-crowd.mp3",
+  "volume": 0.4,
+  "say": "meanest",
+  "after": "face",
+  "offset": -0.1
+ },
+ {
+  "sfx": "ep05-repair-laugh.mp3",
+  "volume": 0.45,
+  "say": "laughed"
+ },
+ {
+  "sfx": "el-impact-boom.mp3",
+  "volume": 0.45,
+  "say": "zero",
+  "after": "wasn't"
+ },
+ {
+  "sfx": "el-power-up.mp3",
+  "volume": 0.45,
+  "say": "strongest"
+ },
+ {
+  "sfx": "ep05-wifi-river.mp3",
+  "volume": 0.4,
+  "say": "just",
+  "after": "strongest",
+  "offset": -0.1
+ },
+ {
+  "sfx": "el-counter-tick.mp3",
+  "volume": 0.35,
+  "say": "three",
+  "after": "whole"
+ },
+ {
+  "sfx": "el-ding-correct.mp3",
+  "volume": 0.4,
+  "say": "phones",
+  "after": "whole"
+ },
+ {
+  "sfx": "el-riser-short.mp3",
+  "volume": 0.3,
+  "say": "when",
+  "offset": -0.2
+ },
+ {
+  "sfx": "el-bubble-pop.mp3",
+  "volume": 0.45,
+  "say": "give",
+  "after": "when"
+ },
+ {
+  "sfx": "el-searching.mp3",
+  "volume": 0.35,
+  "say": "searching",
+  "nth": 2
+ },
+ {
+  "sfx": "el-message-in.mp3",
+  "volume": 0.45,
+  "say": "sent"
+ },
+ {
+  "sfx": "el-heart-pops.mp3",
+  "volume": 0.45,
+  "say": "forty-seven"
+ },
+ {
+  "sfx": "ep05-4k-sparkle.mp3",
+  "volume": 0.45,
+  "say": "4k",
+  "nth": 2
+ }
+]

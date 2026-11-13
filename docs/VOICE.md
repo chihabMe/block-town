@@ -51,6 +51,12 @@ text. Do not shift the word list by hand to force a match: fix the script token 
 hyphen) and run `words.py` again. Never clone anyone's voice from their videos, and never put a reference clip in a
 video or in this kit.
 
+# Levelling
+
+After every take (free or paid), run `python3 -I SKILL/blockworld/level_voice.py EPISODE`. It puts every sentence at
+the same loudness (vo/voice_level.wav) without changing the voice; `finish.json` `"voice": "vo/voice_level.wav"` and
+`"loudness": "static"` then keep it steady through the whole video (`docs/SOUND.md`).
+
 # Music
 
 The song the top creators use under almost every video is **"Numbers" by TEMPOREX** (6 of the 9 creators whose music

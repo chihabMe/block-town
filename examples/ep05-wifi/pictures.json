@@ -1,0 +1,9 @@
+{
+ "search": {"kind": "wifi_search", "title": "Wi-Fi", "status": "Searching...",
+            "hint": ["No networks found nearby", "Be nice to get signal"]},
+ "call": {"kind": "calling", "name": "Grandma", "who": "gran"},
+ "signal": {"kind": "hotspot", "big": "100%", "count": "312 phones",
+            "names": ["Grandma's tablet", "Mrs. Lee's phone", "Bakery laptop", "Mr. Patel's phone"], "more": "+ 308 more"},
+ "hearts": {"kind": "chat", "name": "Grandma", "who": "gran",
+            "bubbles": [["time", "Today 6:02 PM"], ["text", ["Did my Wi-Fi come", "back on? :)"]], ["hearts", 21, "x47"]]}
+}
