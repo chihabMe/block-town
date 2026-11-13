@@ -17,9 +17,11 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 
 const W = 1080, H = 1920;
+// ?s=0.5 draws a smaller frame (the draft: 540x960). The picture is the same, only fewer pixels.
+const S = Math.min(1, Math.max(0.25, Number(new URLSearchParams(location.search).get("s") || 1)));
 const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
 renderer.setPixelRatio(1);
-renderer.setSize(W, H);
+renderer.setSize(Math.round(W * S), Math.round(H * S));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.NoToneMapping;
 renderer.shadowMap.enabled = true;
@@ -76,7 +78,7 @@ function setSky(s) {
 // ---------------------------------------------------------------- lights
 const sun = new THREE.DirectionalLight(0xffffff, 3);
 sun.castShadow = true;
-sun.shadow.mapSize.set(4096, 4096);
+sun.shadow.mapSize.set(S < 1 ? 2048 : 4096, S < 1 ? 2048 : 4096);   // the draft gets a lighter shadow map
 sun.shadow.bias = -0.0004;
 sun.shadow.normalBias = 0.03;
 sun.shadow.radius = 3;

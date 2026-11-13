@@ -16,7 +16,8 @@ The first words are exactly "In this town," or "In this world,", then the rule. 
 | Twistable | Can it mean something else at the end, fairly? |
 | Sayable | Is it 10 words or fewer, concrete, and something you can **show** as a landmark? |
 
-Show the user three rules in different moods (comedy, horror, heart), each with its landmark idea. Never reuse a rule,
+Show the user five ideas in at least three moods (comedy, horror, heart, meta), each with its landmark idea and a
+recommended pick (`docs/RESEARCH.md` has the table). Never reuse a rule,
 joke or twist from another creator's video.
 
 ## 2. The shape (8 beats, with what the top videos add)
@@ -42,8 +43,9 @@ Style:
 
 ## 3. Options and the critic check
 
-Write the main script (option A) and a second ending (option B: a different twist or tone). Then score option A,
-1–10 each, and fix anything under 8 before showing it (or say why a lower score is on purpose):
+Write **three full scripts** (A, B, C) for the chosen idea, each a real alternative: a different twist, tone or
+underdog, not the same story reworded. Score every one, 1–10 on each point below, and fix anything under 8 before
+showing them (or say why a lower score is on purpose). Mark the recommended one; "go with yours" means that one:
 
 1. Opens with "In this town" / "In this world".
 2. Rule ≤ 10 words, concrete, visual.
