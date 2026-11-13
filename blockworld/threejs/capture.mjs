@@ -15,6 +15,8 @@ const KIT = path.dirname(fileURLToPath(import.meta.url));
 const DATA = path.resolve(process.env.TJ_DATA || ".");
 const OUT = path.resolve(process.env.TJ_FRAMES || path.join(DATA, "frames"));
 const QUALITY = Number(process.env.TJ_JPEG || "93");
+const SCALE = Math.min(1, Math.max(0.25, Number(process.env.TJ_SCALE || "1")));   // 0.5 = the 540x960 draft
+const VW = Math.round(1080 * SCALE), VH = Math.round(1920 * SCALE);
 const types = { ".html": "text/html", ".js": "text/javascript", ".png": "image/png", ".jpg": "image/jpeg",
                 ".json": "application/json", ".glb": "model/gltf-binary", ".bin": "application/octet-stream" };
 
@@ -69,13 +71,13 @@ async function launchBrowser() {
     executablePath: chrome(),
     headless: "new",
     args: ["--no-sandbox", "--disable-dev-shm-usage", "--ignore-gpu-blocklist", "--enable-gpu", "--use-gl=angle",
-           "--window-size=1080,1920", "--hide-scrollbars", "--force-device-scale-factor=1"],
+           `--window-size=${VW},${VH}`, "--hide-scrollbars", "--force-device-scale-factor=1"],
   });
   page = await browser.newPage();
-  await page.setViewport({ width: 1080, height: 1920, deviceScaleFactor: 1 });
+  await page.setViewport({ width: VW, height: VH, deviceScaleFactor: 1 });
   page.on("pageerror", (err) => console.error("PAGE", err));
   page.on("console", (m) => { if (m.type() === "error" && !m.text().includes("404")) console.error("CONSOLE", m.text()); });
-  await page.goto(`http://127.0.0.1:${server.address().port}/scene.html`, { waitUntil: "networkidle0", timeout: 180000 });
+  await page.goto(`http://127.0.0.1:${server.address().port}/scene.html?s=${SCALE}`, { waitUntil: "networkidle0", timeout: 180000 });
   await page.waitForFunction("window.__ready === true", { timeout: 180000 });
   if (!info) {
     info = await page.evaluate(() => window.__check);
