@@ -39,6 +39,19 @@ def reset():
     FOCUS.clear()
 
 
+def _see_through(o):
+    """Nearly invisible things (a spotlight beam, a ghost at < 20 %) don't hide what is behind them."""
+    if getattr(o, "type", "") != "MESH" or not o.material_slots:
+        return False
+    for sl in o.material_slots:
+        m = sl.material
+        if m is None or not m.use_nodes or "Principled BSDF" not in m.node_tree.nodes:
+            return False
+        if m.node_tree.nodes["Principled BSDF"].inputs["Alpha"].default_value >= 0.2:
+            return False
+    return True
+
+
 def _mesh_parts(o):
     return [c for c in o.children_recursive if c.type in ("MESH", "FONT") and not c.hide_render]
 
@@ -111,7 +124,7 @@ def check(cards):
             ok, loc, _n, _i, obj, _m = scene.ray_cast(deps, start, direction, distance=left)
             if not ok:
                 return None
-            if not obj.hide_render and not any(a.hide_render for a in _ancestors(obj)):
+            if not obj.hide_render and not any(a.hide_render for a in _ancestors(obj)) and not _see_through(obj):
                 return obj
             start = loc + direction * 0.02
         return None

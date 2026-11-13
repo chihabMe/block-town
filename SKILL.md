@@ -19,7 +19,7 @@ settings, and the steps from an idea to a finished vertical video. The skill fol
 file; it is called `SKILL` below. Episodes live outside it (the user names the folder), called `EPISODE` below. Use
 absolute paths.
 
-Read before building: `docs/RESEARCH.md` (gate 0 research with Apify, gate 1's five ideas), `docs/WORLD_V2.md`
+Read before building: `docs/PLACES.md` (which place to load, its marks and its cameras), `docs/RESEARCH.md` (gate 0 research with Apify, gate 1's five ideas), `docs/WORLD_V2.md`
 (the dressed town, 24 faces, outfits, camera pack and post-processed picture, on by default), `docs/ROBLOX_LOOK.md` (the world, the cast, the props, how shots are made),
 `docs/RENDER.md` (the Three.js renderer, the life layer, tags, phone screens and printed props),
 `docs/SCRIPT.md` (how the story is written), `docs/VOICE.md` (voice and music), `docs/SOUND.md` (sound effects,
@@ -55,9 +55,25 @@ A 66-second episode takes about **10-12 minutes** from frames to finished MP4s (
   anything (ep05's "giving every bar away" beam read as "a blue line"). Show the thing itself: bars flying out of a
   tag, a counter going down, a phone screen that says it.
 
+## The world
+
+Load places. Do not rebuild the town inside an episode. `docs/PLACES.md` is the map: nine places, each with named spots and ready cameras. An episode names only the places the story enters.
+
+```python
+from places import place
+import cast
+street = place("street", rule_big="KNOW YOUR PRICE", shop_signs=("PRICE SHOP", "TAG CAFE"))
+hall = place("school_hall", banner="TALENT SHOW")
+stand(BOY, hall.spot("stage"), hall.yaw("stage"), "happy", T)
+hall.cam("crowd_pov")
+doc = cast.get("doctor")
+```
+
+`build_town(...)` is still `place("street")`. Marks with `desk`, `seat`, `sofa` or `table` in the name are for `sit`. The others are for `stand`. A person who is not one of the eight recurring characters comes from `cast.get` or `cast.role`. A new place goes in `blockworld/places/` and gets a section in `docs/PLACES.md` in the same change.
+
 ## The look
 
-New episodes use the **Roblox look**: `build_town(..., style="roblox")`. Round heads with anime faces, layered hair,
+New episodes use the **Roblox look**: `build_town(..., style="roblox")` or `place("street")`. Round heads with anime faces, layered hair,
 printed clothes, shiny plastic, sun / fog / rain moods, 3-word karaoke captions. The older **block look** (cube heads,
 flat colours) is still there for episodes that started in it: `build_town(...)` without `style` gives the block look,
 so always write `style="roblox"` in a new episode.
@@ -207,7 +223,9 @@ python3 -I SKILL/blockworld/finish.py EPISODE                # gate 8: captions 
 
 | Path | What |
 |---|---|
-| `blockworld/town.py` | the street, the cast, `pose()`, light, camera, `build_town(style=...)` |
+| `blockworld/places/`, `docs/PLACES.md` | the world library: `place(name, ...)`, marks, cameras, per-video signs |
+| `blockworld/cast.py` | extras and costumes: `cast.get`, `cast.role`, `cast.crowd` |
+| `blockworld/town.py` | the street, the eight recurring characters, `pose()`, light, camera, `build_town` (shortcut for `place("street")`) |
 | `blockworld/roblox.py` | the Roblox look: `rchar`, plastic, moods, `rule_sign`, `giant_clock`, `puddles` |
 | `blockworld/rprops.py` | ready props: signal-bar tags and flying bar tokens, phones with real screens and a hand, lit and printed pictures, folded paper map, poster, sash, top hat, bus, door, beam, pigeon, Wi-Fi tower |
 | `blockworld/pictures.py`, `blockworld/pictures/` | draws phone screens, lock screens and maps from `pictures.json`; the kit's default pictures |

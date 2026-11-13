@@ -2,6 +2,7 @@
 // Normally run by render_threejs.sh:
 //   TJ_DATA=EPISODE/threejs TJ_FRAMES=EPISODE/frames node SKILL/blockworld/threejs/capture.mjs
 // TJ_DATA holds bake.py's output (scene.glb, materials.json, anim.json, anim.bin, tex/).
+// TJ_CAPTURE=canvas (default) encodes the canvas in the page. TJ_CAPTURE=screenshot uses a page screenshot.
 // Frames are named f_####.jpg from the bake's first frame (anim.json f0), so a partial render drops into place.
 // CHROME may point at the browser; otherwise the usual Chrome / Chromium paths are tried.
 import http from "node:http";
@@ -17,6 +18,9 @@ const OUT = path.resolve(process.env.TJ_FRAMES || path.join(DATA, "frames"));
 const QUALITY = Number(process.env.TJ_JPEG || "93");
 const SCALE = Math.min(1, Math.max(0.25, Number(process.env.TJ_SCALE || "1")));   // 0.5 = the 540x960 draft
 const VW = Math.round(1080 * SCALE), VH = Math.round(1920 * SCALE);
+// canvas: the page encodes the WebGL canvas right after drawing, and Node writes the file while the next frame draws.
+// screenshot: the older page screenshot (slower, same picture).
+const CAPTURE = process.env.TJ_CAPTURE || "canvas";
 const types = { ".html": "text/html", ".js": "text/javascript", ".png": "image/png", ".jpg": "image/jpeg",
                 ".json": "application/json", ".glb": "model/gltf-binary", ".bin": "application/octet-stream" };
 
@@ -102,6 +106,7 @@ const frames = Number(process.env.FRAMES || info.frames);
 const loop0 = Date.now();
 let render = 0;
 let drawnInBatch = 0;
+const writes = [];
 
 // TJ_ONLY=0,150,300 draws just those frames of the bake (quick look tests); TJ_QUERY=post=0 passes renderer options.
 const only = process.env.TJ_ONLY ? new Set(process.env.TJ_ONLY.split(",").map(Number)) : null;
@@ -119,8 +124,18 @@ for (let i = 0; i < frames; i++) {
   let attempts = 0;
   while (attempts < 3) {
     try {
-      render += await page.evaluate((k) => window.renderAt(k), i);
-      await page.screenshot({ path: framePath, type: "jpeg", quality: QUALITY });
+      if (CAPTURE === "screenshot") {
+        render += await page.evaluate((k) => window.renderAt(k), i);
+        await page.screenshot({ path: framePath, type: "jpeg", quality: QUALITY });
+      } else {
+        const [ms, url] = await page.evaluate((k, q) => {
+          const t = window.renderAt(k);
+          return [t, document.querySelector("canvas").toDataURL("image/jpeg", q)];
+        }, i, QUALITY / 100);
+        render += ms;
+        writes.push(writeFile(framePath, Buffer.from(url.slice(url.indexOf(",") + 1), "base64")));
+        if (writes.length > 16) await Promise.all(writes.splice(0));
+      }
       drawnInBatch++;
       break;
     } catch (err) {
@@ -133,6 +148,7 @@ for (let i = 0; i < frames; i++) {
   }
   if (i % 300 === 0 || i === frames - 1) console.log(`frame ${f0 + i} (${i + 1} of ${frames})`);
 }
+await Promise.all(writes);
 const loop = (Date.now() - loop0) / 1000;
 await writeFile(path.join(DATA, "capture.json"), JSON.stringify({ info, frames, loop_s: loop,
   per_frame_s: loop / frames, render_ms: render / frames, total_s: (Date.now() - wall0) / 1000 }, null, 1));

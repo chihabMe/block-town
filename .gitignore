@@ -22,3 +22,6 @@ blockworld/threejs/node_modules/
 episodes/
 examples/*/vo/voice_level.wav
 examples/*/pictures/
+
+# world library: saved places (rebuilt from code when missing)
+blockworld/places/cache/
