@@ -580,9 +580,10 @@ def crown(c, colour="#FFD23A"):
     return r
 
 
-def cookie(c=None, side="R", loc=(0, 0, 0)):
-    """A chocolate-chip cookie, in a hand (c) or standing on its own at loc."""
+def cookie(c=None, side="R", loc=(0, 0, 0), size=1.8):
+    """A big chocolate-chip cookie (size 1.8 reads at phone size), in a hand (c) or standing on its own at loc."""
     r = _in_hand(c, side, "cookie") if c else T.empty("cookie", loc)
+    r.scale = (size, size, size)
     disc(0.55, 0.16, (0, -0.15, 0), plastic("#C98A45", 0.7), r, bv=0.05, verts=24)
     for x, z in ((-0.2, 0.15), (0.18, 0.2), (0.05, -0.2), (-0.25, -0.18), (0.28, -0.05)):
         blob((0.07, 0.05, 0.07), (x, -0.24, z), plastic("#3B2414", 0.6), r)
@@ -590,13 +591,14 @@ def cookie(c=None, side="R", loc=(0, 0, 0)):
 
 
 def scanner(c, side="R"):
-    """The mayor's handheld tag scanner: a grey gun with a red glowing window. scan_on(sc, k) lights the red line."""
+    """The mayor's handheld tag scanner, pointing along the arm (aim the arm at the head being scanned): a yellow
+    body with a red glowing window. scan_on(sc, k) grows the red scan line out of the window."""
     r = _in_hand(c, side, "scanner")
-    rbox((0.42, 0.45, 0.9), (0, 0, 0.1), plastic("#2A2C33", 0.4), r, bv=0.08)                 # handle
-    rbox((0.6, 1.6, 0.6), (0, -0.55, 0.65), plastic("#F2C230", 0.35), r, bv=0.12)              # body
-    rbox((0.5, 0.06, 0.4), (0, -1.36, 0.65), glow("#FF2A2A", 3.0), r, bv=0.04)                 # window
-    line = rbox((0.05, 6.0, 0.05), (0, -4.4, 0.65), glow("#FF2A2A", 4.0), r, bv=0.0)
-    line.scale = (1, 0.001, 1)
+    rbox((0.42, 0.9, 0.45), (0, 0.35, 0.0), plastic("#2A2C33", 0.4), r, bv=0.08)              # grip
+    rbox((0.62, 0.62, 1.7), (0, 0, -0.55), plastic("#F2C230", 0.35), r, bv=0.12)               # body along the arm
+    rbox((0.5, 0.5, 0.06), (0, 0, -1.42), glow("#FF2A2A", 3.0), r, bv=0.04)                    # window
+    line = rbox((0.05, 0.05, 6.0), (0, 0, -4.45), glow("#FF2A2A", 4.0), r, bv=0.0)
+    line.scale = (1, 1, 0.001)
     r["scanline"] = line.name
     return r
 
@@ -604,8 +606,9 @@ def scanner(c, side="R"):
 def scan_on(sc, k):
     """k 0..1: the red scan line grows out of the scanner window (0 = off)."""
     o = bpy.data.objects[sc["scanline"]]
-    o.scale = (1, max(0.001, k), 1)
-    o.location.y = -1.4 - 3.0 * max(0.001, k)
+    k = max(0.001, k)
+    o.scale = (1, 1, k)
+    o.location.z = -1.45 - 3.0 * k
 
 
 def lawn_mower(x, y, z=0.0, yaw=0):
