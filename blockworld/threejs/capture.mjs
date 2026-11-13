@@ -36,6 +36,14 @@ function serve() {
     const server = http.createServer(async (req, res) => {
       const rel = decodeURIComponent(new URL(req.url, "http://127.0.0.1").pathname).replace(/^\/+/, "") || "scene.html";
       const root = rel === "scene.html" || rel.startsWith("node_modules/") ? KIT : DATA;
+      if (rel.startsWith("node_modules/")) {                 // node_modules may be a link (a git worktree shares it)
+        try {
+          const data = await readFile(path.join(KIT, rel));
+          res.writeHead(200, { "Content-Type": types[path.extname(rel)] || "application/octet-stream" });
+          res.end(data);
+        } catch { res.writeHead(404); res.end("missing"); }
+        return;
+      }
       const file = path.resolve(root, rel);
       if (!file.startsWith(root + path.sep)) { res.writeHead(403); res.end(); return; }
       try {
@@ -77,7 +85,8 @@ async function launchBrowser() {
   await page.setViewport({ width: VW, height: VH, deviceScaleFactor: 1 });
   page.on("pageerror", (err) => console.error("PAGE", err));
   page.on("console", (m) => { if (m.type() === "error" && !m.text().includes("404")) console.error("CONSOLE", m.text()); });
-  await page.goto(`http://127.0.0.1:${server.address().port}/scene.html?s=${SCALE}`, { waitUntil: "networkidle0", timeout: 180000 });
+  // ?s= sets the draft size; TJ_QUERY=post=0 passes renderer options (scene.html)
+  await page.goto(`http://127.0.0.1:${server.address().port}/scene.html?s=${SCALE}${process.env.TJ_QUERY ? "&" + process.env.TJ_QUERY : ""}`, { waitUntil: "networkidle0", timeout: 180000 });
   await page.waitForFunction("window.__ready === true", { timeout: 180000 });
   if (!info) {
     info = await page.evaluate(() => window.__check);
@@ -94,7 +103,10 @@ const loop0 = Date.now();
 let render = 0;
 let drawnInBatch = 0;
 
+// TJ_ONLY=0,150,300 draws just those frames of the bake (quick look tests); TJ_QUERY=post=0 passes renderer options.
+const only = process.env.TJ_ONLY ? new Set(process.env.TJ_ONLY.split(",").map(Number)) : null;
 for (let i = 0; i < frames; i++) {
+  if (only && !only.has(i)) continue;
   const framePath = path.join(OUT, `f_${String(f0 + i).padStart(4, "0")}.jpg`);
   if (existsSync(framePath)) {
     if (i % 300 === 0) console.log(`frame ${f0 + i} (${i + 1} of ${frames}) [cached]`);

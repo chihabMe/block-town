@@ -700,3 +700,260 @@ def coin():
     T.text("$", 0.6, (0, -0.08, 0), plastic("#C89412", 0.3), e, extrude=0.0)
     anim.CARDS.append(e)
     return e
+
+
+# ---------------------------------------------------------------- the narrator, the school hall, the talent show (ep09)
+def sky_mic(x, y, z, size=1.0):
+    """The narrator: a giant old radio microphone hanging from a cloud on a cable, an ON AIR light on its neck.
+    Faces local -Y. The cloud sits size * 26 studs above z (the grille's centre). Park it high over the street
+    (z ~ 60-80) and film it from below, or near the camera for an insert."""
+    r = T.empty("skymic", (x, y, z))
+    r.scale = (size,) * 3
+    chrome, dark, grill = plastic("#C9CED6", 0.18), plastic("#2A2C33", 0.35), plastic("#8E959F", 0.3)
+    blob((3.4, 3.4, 4.6), (0, 0, 0), grill, r)                                                   # the grille
+    for i in range(5):                                                                           # grille bands
+        zz = -3.0 + i * 1.5
+        k = math.sqrt(max(0.0, 1 - (zz / 4.6) ** 2))
+        disc(3.42 * k + 0.05, 0.22, (0, 0, zz), chrome, r, rot=(0, 0, 0), bv=0.05, verts=40)
+    disc(3.5, 0.6, (0, 0, 0), chrome, r, rot=(90, 0, 90), bv=0.15, verts=48)                     # the side ring
+    rbox((1.4, 1.4, 3.2), (0, 0, -6.0), chrome, r, bv=0.3)                                       # neck
+    rbox((1.9, 1.9, 0.8), (0, 0, -7.6), dark, r, bv=0.2)                                         # base collar
+    rbox((1.6, 0.2, 0.7), (0, -0.78, -6.0), glow("#FF3B30", 4.0), r, bv=0.06)                   # ON AIR light
+    T.text("ON AIR", 0.32, (0, -0.9, -6.0), plastic("#FFFFFF", 0.4, key="onair"), r, extrude=0.0)
+    for zz in range(5, 27, 2):                                                                   # the cable up to the cloud
+        rbox((0.32, 0.32, 2.1), (0, 0, zz), dark, r, bv=0.08)
+    cl = T.mat("#FFFFFF", emit=1.0, key="micloud")
+    for i, (cx, cz, s) in enumerate(((0, 27, 7.5), (-7, 25.5, 5.5), (7, 25.5, 6.0), (-3, 30, 5.0), (4, 30.5, 5.5))):
+        blob((s, s * 0.7, s * 0.65), (cx, 0, cz), cl, r)
+    return r
+
+
+def mail_bag(c, colour="#3D5BA8"):
+    """A mail carrier's shoulder bag with a strap across the chest and letters poking out (hangs on the left hip)."""
+    m = plastic(colour, 0.6)
+    s = T.empty(c["name"] + ".mailbag", (0, 0, 0), c["body"])
+    rbox((0.3, 1.08, 2.7), (0, 0, 1.15), m, s, rot=(0, -38, 0), bv=0.05)                      # strap across the chest
+    rbox((1.5, 0.9, 1.3), (-1.0, -0.25, 0.25), m, s, bv=0.12)                                  # the bag
+    rbox((1.52, 0.4, 0.6), (-1.0, -0.6, 0.66), plastic("#2C4483", 0.6), s, rot=(-20, 0, 0), bv=0.06)   # flap
+    for i, dx in enumerate((-0.4, 0.0, 0.35)):
+        rbox((0.6, 0.06, 0.8), (-1.0 + dx, -0.1, 1.0 + 0.08 * i), plastic("#FFFFFF", 0.6), s, rot=(0, (i - 1) * 12, 0),
+             bv=0.02)
+    return s
+
+
+def sunglasses(c, colour="#121318"):
+    """Black shades across the eyes (the 'cool' kid)."""
+    m, rim = plastic(colour, 0.12), plastic("#2B2D33", 0.3)
+    g = T.empty(c["name"] + ".shades", (0, -0.66, 0.08), c["head"])
+    for sx in (-1, 1):
+        rbox((0.5, 0.08, 0.34), (sx * 0.3, 0, 0), m, g, bv=0.06)
+    rbox((1.32, 0.08, 0.08), (0, 0, 0.13), rim, g, bv=0.02)
+    rbox((0.06, 0.6, 0.06), (-0.64, 0.3, 0.13), rim, g, bv=0.01)
+    rbox((0.06, 0.6, 0.06), (0.64, 0.3, 0.13), rim, g, bv=0.01)
+    return g
+
+
+def suit(c, colour="#FFD21F", tie="#E23B3B"):
+    """A bright suit over the clothes (jacket, sleeves, trousers, bow tie). Hidden until shown:
+    s = suit(BOY) once, then s(True) inside a shot (it hides again every frame)."""
+    m, lap = plastic(colour, 0.35), plastic("#E8B800", 0.4)
+    parts = [rbox((2.08, 1.08, 2.04), (0, 0, 1.0), m, c["body"], bv=0.08),
+             rbox((0.5, 0.06, 1.2), (-0.42, -0.55, 1.5), lap, c["body"], rot=(0, -12, 0), bv=0.03),
+             rbox((0.5, 0.06, 1.2), (0.42, -0.55, 1.5), lap, c["body"], rot=(0, 12, 0), bv=0.03)]
+    for side in ("L", "R"):
+        parts.append(rbox((1.06, 1.06, 1.7), (0, 0, -0.8), m, c["arm" + side], bv=0.08))
+        parts.append(rbox((1.04, 1.04, 1.68), (0, 0, -0.83), m, c["leg" + side], bv=0.06))
+    t = plastic(tie, 0.35)
+    parts.append(rbox((0.34, 0.1, 0.26), (0, -0.58, 1.86), t, c["body"], bv=0.04))
+    for sx in (-1, 1):
+        parts.append(rbox((0.36, 0.1, 0.36), (sx * 0.3, -0.58, 1.86), t, c["body"], rot=(0, 45, 0), bv=0.04))
+
+    def show(on=True):
+        for o in parts:
+            o.hide_render = not on
+    show(False)
+    anim.before_each_frame(lambda Tm: show(False))
+    return show
+
+
+def tiny_house(x, y, colour="#E39AB5", roof="#7A3B52", yaw=0):
+    """A doll's house just big enough for a grown man wearing it: walls 3.4 high; his head pokes through the roof
+    and his arms out of the roof sides. Stand the man at (x, y, ground) facing the same way with
+    armL=armR=(0, 90). Faces local -Y (front door)."""
+    r = T.empty("tinyhouse", (x, y, T.WALK), yaw=yaw)
+    wall, dark, white = plastic(colour, 0.6), plastic(roof, 0.5), plastic("#FFFFFF", 0.5)
+    for sx in (-1, 1):
+        rbox((0.3, 3.6, 3.4), (sx * 2.2, 0, 1.7), wall, r, bv=0.05)
+    rbox((4.7, 0.3, 3.4), (0, -1.8, 1.7), wall, r, bv=0.05)
+    rbox((4.7, 0.3, 3.4), (0, 1.8, 1.7), wall, r, bv=0.05)
+    rbox((1.0, 0.1, 1.7), (0, -1.96, 0.85), plastic("#5A2E1E", 0.5), r, bv=0.04)              # tiny door
+    blob((0.08, 0.06, 0.08), (0.32, -2.02, 0.85), plastic("#FFD23A", 0.2), r)
+    for sx in (-1.3, 1.3):                                                                        # tiny windows
+        rbox((0.8, 0.1, 0.8), (sx, -1.96, 2.2), glow("#FFE7A8", 0.6), r, bv=0.03)
+        rbox((0.9, 0.12, 0.08), (sx, -1.97, 2.2), white, r, bv=0.01)
+        rbox((0.08, 0.12, 0.9), (sx, -1.97, 2.2), white, r, bv=0.01)
+    for sx in (-1, 1):                                                                            # roof halves, a gap in
+        rbox((1.75, 4.3, 0.3), (sx * 1.85, 0, 3.75), dark, r, rot=(0, sx * 28, 0), bv=0.05)      # the middle for a head
+    rbox((0.6, 0.6, 1.2), (1.5, 1.0, 4.8), plastic("#B5463E", 0.6), r, bv=0.05)                 # chimney
+    rbox((2.0, 0.9, 0.05), (0, -2.9, 0.03), plastic("#7A5A3A", 0.8), r, bv=0.0)                 # doormat
+    T.text("HOME", 0.35, (0, -2.9, 0.07), plastic("#F2E6C8", 0.6, key="homemat"), r, rot=(0, 0, 0), extrude=0.0)
+    rbox((0.15, 0.15, 1.2), (2.9, -2.6, 0.6), plastic("#6B4A33", 0.5), r, bv=0.02)              # mailbox post
+    rbox((0.55, 0.8, 0.5), (2.9, -2.6, 1.35), plastic("#2B62D9", 0.4), r, bv=0.1)               # mailbox
+    return r
+
+
+def drum_kit(x, y, z=0.0, yaw=0):
+    """A drum kit facing local -Y (the drummer sits behind it at local (0, 2.2)): bass drum, snare, two toms, a
+    cymbal on a stand and a stool. Sit the drummer with sit(); see anim.drum()."""
+    r = T.empty("drums", (x, y, z), yaw=yaw)
+    red, white, chrome = plastic("#D62B2B", 0.3), plastic("#F4F4F4", 0.4), plastic("#C9CED6", 0.2)
+    disc(1.5, 1.4, (0, 0, 1.5), red, r, rot=(90, 0, 0), bv=0.1, verts=40)                      # bass drum
+    disc(1.36, 1.44, (0, 0, 1.5), white, r, rot=(90, 0, 0), bv=0.05, verts=40)
+    T.text("MAX", 0.5, (0, -0.74, 1.5), plastic("#D62B2B", 0.3, key="drumink"), r, extrude=0.0)
+    for (dx, dz, rr) in ((-1.2, 3.1, 0.7), (1.2, 3.1, 0.7)):                                       # toms
+        disc(rr, 0.7, (dx, 0.3, dz), red, r, rot=(14, 0, 0), bv=0.06, verts=32)
+        disc(rr - 0.06, 0.74, (dx, 0.3, dz), white, r, rot=(14, 0, 0), bv=0.03, verts=32)
+    disc(0.8, 0.5, (-0.6, 1.4, 2.4), white, r, rot=(0, 0, 0), bv=0.05, verts=32)                # snare
+    rbox((0.12, 0.12, 4.0), (2.4, 0.9, 2.0), chrome, r, bv=0.02)                                 # cymbal stand
+    disc(1.1, 0.08, (2.4, 0.9, 4.1), plastic("#E6B83C", 0.15), r, rot=(10, 0, 0), bv=0.02, verts=40)
+    rbox((1.3, 1.3, 0.4), (0, 2.2, 1.8), plastic("#2A2C33", 0.4), r, bv=0.12)                   # stool
+    rbox((0.25, 0.25, 1.6), (0, 2.2, 0.8), chrome, r, bv=0.03)
+    return r
+
+
+def drumsticks(c):
+    """A stick in each hand, pointing forward. Hidden until shown: sticks = drumsticks(BOY), then sticks(True) in
+    the drum shots (they hide again every frame)."""
+    m = plastic("#E2B87A", 0.5)
+    parts = []
+    for side in ("L", "R"):
+        h = _in_hand(c, side, "stick")
+        parts.append(rbox((0.16, 1.8, 0.16), (0, -0.8, 0), m, h, bv=0.05))
+
+    def show(on=True):
+        for o in parts:
+            o.hide_render = not on
+    show(False)
+    anim.before_each_frame(lambda Tm: show(False))
+    return show
+
+
+def ball(colour="#FF3B6B", r=0.45):
+    """A juggling ball (place it per frame with .location; anim.juggle() does it)."""
+    e = T.empty("ball")
+    blob((r, r, r), (0, 0, 0), plastic(colour, 0.25), e)
+    return e
+
+
+def rabbit(parent=None, loc=(0, 0, 0)):
+    """A white rabbit sitting up, facing local -Y, about 1.6 studs tall. Parent it to a cap or a hand for a reveal."""
+    r = T.empty("rabbit", loc, parent)
+    fur, pink = plastic("#F7F7F7", 0.6), plastic("#FFB3C7", 0.5)
+    blob((0.55, 0.5, 0.6), (0, 0, 0.55), fur, r)
+    blob((0.42, 0.4, 0.4), (0, -0.1, 1.25), fur, r)
+    for sx in (-1, 1):
+        rbox((0.2, 0.1, 0.9), (sx * 0.18, 0.0, 1.95), fur, r, rot=(0, sx * 10, 0), bv=0.08)
+        rbox((0.1, 0.04, 0.6), (sx * 0.18, -0.06, 1.95), pink, r, rot=(0, sx * 10, 0), bv=0.03)
+        blob((0.06, 0.04, 0.08), (sx * 0.15, -0.46, 1.32), plastic("#1E1F24", 0.3), r)
+    blob((0.07, 0.05, 0.05), (0, -0.5, 1.2), pink, r)
+    return r
+
+
+def school_hall(x, y, banner="TALENT SHOW", rows=4, per_row=8, crowd=True):
+    """The school hall, built far from the street (park it at y = -560 or further). The audience faces +Y, toward a
+    stage at the back with red curtains, a banner and a spotlight. Returns a dict:
+        stage     the middle of the stage floor (x, y, z): stand a performer there
+        spot      the spotlight's floor circle (show or hide with hall["light"](on))
+        seats     every seat (x, y, z) in the audience, front row first, for sit(...) or crowd()
+        cam_back  a camera spot at the back of the hall looking at the stage (a wide)
+    crowd=True fills every seat with a random audience member (hall["crowd"]: their character dicts)."""
+    import random as _r
+    r = T.empty("hall", (x, y, 0))
+    floor_m, wall_m = plastic("#B07A4A", 0.55), plastic("#3B3F70", 0.75)
+    rbox((64, 80, 0.4), (0, 10, -0.2), floor_m, r, bv=0.05)
+    for sx in (-1, 1):
+        rbox((0.8, 80, 26), (sx * 32, 10, 13), wall_m, r, bv=0.05)                               # side walls
+        for wy in (-14, 6, 26):
+            rbox((0.2, 6, 10), (sx * 31.5, wy, 14), glow("#9FD8FF", 0.6), r, bv=0.05)           # tall windows
+    rbox((64, 0.8, 26), (0, 50, 13), wall_m, r, bv=0.05)                                         # back wall
+    ceil = rbox((64, 80, 0.6), (0, 10, 26.3), plastic("#2A2E52", 0.8), r, bv=0.05)                # ceiling (no shadow:
+    ceil.visible_shadow = False                                                                   # the sun still lights
+    for cy in (-20, 0, 20):                                                                       # the room)
+        rbox((50, 1.2, 0.4), (0, cy, 25.8), glow("#FFF1D0", 1.4), r, bv=0.1)                    # strip lights
+    wood, red, gold = plastic("#7A4A2C", 0.45), plastic("#B0182A", 0.65), plastic("#E8B23A", 0.3)
+    rbox((40, 14, 3.0), (0, 42, 1.5), wood, r, bv=0.1)                                           # the stage
+    rbox((40.4, 0.4, 0.5), (0, 35, 3.0), gold, r, bv=0.05)                                       # stage lip
+    for i in range(3):                                                                            # steps
+        rbox((6, 1.2, 1.0 * (i + 1)), (-14, 34.4 - 1.2 * (2 - i), 0.5 * (i + 1)), wood, r, bv=0.05)
+    for sx in (-1, 1):                                                                            # curtains in folds
+        for k in range(7):
+            rbox((1.3, 1.0, 21), (sx * (19.5 - k * 1.2), 36.5 + (k % 2) * 0.5, 13.5), red, r, bv=0.3)
+    for k in range(32):                                                                           # the valance on top
+        rbox((1.3, 1.0, 4.0), (-19.4 + k * 1.25, 36.0 + (k % 2) * 0.4, 22.5), red, r, bv=0.3)
+    rbox((41, 0.6, 0.6), (0, 35.6, 20.5), gold, r, bv=0.05)
+    rbox((40, 0.4, 20), (0, 48.5, 13), plastic("#5A1420", 0.7), r, bv=0.05)                     # back curtain
+    rbox((22, 0.3, 3.6), (0, 47.9, 17.5), plastic("#FFF4D6", 0.5), r, bv=0.1)                   # the banner
+    T.text(banner, 2.2, (0, 47.7, 17.5), plastic("#D62B2B", 0.4, key="hallink"), r, extrude=0.03, max_w=20)
+    for bx in (-11, 11):                                                                          # paper stars
+        blob((0.9, 0.2, 0.9), (bx + 1.5, 47.7, 17.5), glow("#FFD23A", 1.2), r)
+    spot_m = T.mat("#FFF3C4", emit=1.0, key=("spot", x, y))
+    spot = disc(4.6, 0.06, (0, 42, 3.05), spot_m, r, rot=(0, 0, 0), bv=0, verts=48)            # the light pool
+    beam_m = T.mat("#FFF3C4", emit=0.6, key=("spotbeam", x, y))
+    beam_m.node_tree.nodes["Principled BSDF"].inputs["Alpha"].default_value = 0.07
+    beam_m.surface_render_method = "BLENDED"
+    bpy.ops.mesh.primitive_cone_add(vertices=40, radius1=4.6, radius2=0.8, depth=22)
+    bm = bpy.context.object
+    bm.data.materials.append(beam_m)
+    bm.location = (0, 42, 14)
+    bm.parent = r
+    bm.visible_shadow = False
+    bm["no_shadow"] = True
+    lamp = rbox((1.6, 2.4, 1.6), (0, 42, 25.5), plastic("#2A2C33", 0.4), r, bv=0.2)
+
+    def light(on=True):
+        spot.hide_render = bm.hide_render = not on
+    seats = []
+    chair = plastic("#2F3348", 0.5)
+    for row in range(rows):
+        sy = 22 - row * 6.5
+        for k in range(per_row):
+            sx = (k - (per_row - 1) / 2) * 5.0 + (2.5 if k >= per_row / 2 else -2.5)          # an aisle in the middle
+            rbox((3.0, 2.6, 0.5), (sx, sy, 1.9), chair, r, bv=0.1)
+            rbox((3.0, 0.5, 3.0), (sx, sy - 1.4, 3.2), chair, r, bv=0.1)              # the back (behind them)
+            for lx in (-1.2, 1.2):
+                rbox((0.25, 0.25, 1.7), (sx + lx, sy, 0.85), chair, r, bv=0.03)
+            seats.append((x + sx, y + sy - 0.5, 0.0))
+    out = {"root": r, "stage": (x, y + 42, 3.0), "light": light, "seats": seats,
+           "cam_back": ((x, y - 26, 12.0), (x, y + 40, 7.0))}
+    if crowd:
+        rng = _r.Random(9)
+        shirts = ["#2FB5A8", "#F28A1E", "#8A4FB5", "#E23B3B", "#2F6FE0", "#3BB54A", "#FFC533", "#E88BA8", "#5A606B",
+                  "#00A3C4", "#C24E8A", "#7A9A2C"]
+        skins = ["#F0C8A0", "#C98A5A", "#9A5B34", "#E4B58A", "#7A4A2C", "#EBC8A8", "#B97A4A"]
+        hairs = ["black", "brown", "dark", "ginger", "blond"]
+        styles = ["tuft", "side", "long", "bun", "pig", "curl"]
+        people = []
+        for i, s in enumerate(seats):
+            p = T.character(f"Crowd{i}", rng.choice(skins), rng.choice(shirts), rng.choice(["#2B3350", "#3A3A46", "#31406B", "#22222A"]),
+                            rng.choice(styles), rng.choice(hairs), seed=100 + i, scale=rng.choice([0.8, 0.9, 1.0]))
+            people.append(p)
+        out["crowd"] = people
+
+        def fill(Tm, mood="sit", k=1.0, skip=(), turn=0.0):
+            """Seat the whole audience for this frame (they face the stage). mood: "sit", "clap", "cheer", "gasp".
+            turn > 0 turns every head toward +X by that many degrees (a crowd looking at someone in the aisle)."""
+            for i, (c, st) in enumerate(zip(people, seats)):
+                if i in skip:
+                    continue
+                ph = i * 0.7
+                if mood == "clap":
+                    anim.clap(c, st, 180, "happy", Tm, ph, seated=True)
+                elif mood == "cheer":
+                    anim.cheer(c, st, 180, "laugh" if i % 3 else "happy", Tm, ph, seated=True)
+                elif mood == "gasp":
+                    anim.gasp(c, st, 180, k, Tm, ph, seated=True)
+                else:
+                    anim.sit(c, st, 180, "smile" if i % 4 else "sleepy", Tm, ph,
+                             head=(turn + anim.osc(Tm, 0.33, 4, ph), anim.osc(Tm, 0.5, 2, ph)))
+        out["fill"] = fill
+    return out

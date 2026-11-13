@@ -38,6 +38,21 @@ def plastic(hexcol, rough=0.42, key=None):
     return m
 
 
+# world v2: overlay prints (rlook_tex.draw_overlays) and the recurring cast's chest prints in the dressed town
+OVERLAYS = ("tee_star", "tee_stripe", "tee_heart", "tee_number", "tee_bolt", "shirt", "cardigan", "jacket_open",
+            "dungarees", "hoodie2")
+OUTFITS2 = {"Boy": dict(top="tee_star"), "Tall": dict(top="tee_number"), "Nia": dict(top="hoodie2"),
+            "Dad": dict(top="shirt"), "Gran": dict(top="cardigan", stripes=None), "Kid": dict(top="dungarees"),
+            "Man": dict(top="jacket_open")}
+DETAIL = False          # set by apply(detail=True): sleeve rims and collars on everyone
+
+
+def shade(hexcol, k):
+    """A darker (k < 1) or lighter (k > 1) version of a colour."""
+    h = hexcol.lstrip("#")
+    return "#" + "".join(f"{max(0, min(255, round(int(h[i:i + 2], 16) * k))):02X}" for i in (0, 2, 4))
+
+
 def _image(path):
     return bpy.data.images.load(str(path), check_existing=True)
 
@@ -55,6 +70,12 @@ def print_mat(colour, tex, key=None):
     b = nt.nodes["Principled BSDF"]
     if tex in ("jacket", "jeans"):
         nt.links.new(img.outputs["Color"], b.inputs["Base Color"])
+    elif tex in OVERLAYS:                    # a see-through print laid over the shirt colour (white stars, collars)
+        mx = nt.nodes.new("ShaderNodeMix"); mx.data_type = "RGBA"
+        mx.inputs["A"].default_value = T.lin(colour)
+        nt.links.new(img.outputs["Alpha"], mx.inputs["Factor"])
+        nt.links.new(img.outputs["Color"], mx.inputs["B"])
+        nt.links.new(mx.outputs["Result"], b.inputs["Base Color"])
     else:
         mx = nt.nodes.new("ShaderNodeMix"); mx.data_type = "RGBA"; mx.blend_type = "MULTIPLY"
         mx.inputs["Factor"].default_value = 1.0
@@ -258,7 +279,9 @@ def rchar(name, skin, shirt, pants, hair_style, hair_col, sleeves="short", strip
           shoes="#F2F2F2", scale=1.0, seed=0, top="shade", legs="legs", face="smile", cuff=None, register=True):
     """A Roblox-look person. Same joints and keys as town.character(), so pose(), walk(), stand(), size() all work.
 
-    top   "shade" (folds on the shirt colour), "hoodie" (pocket + strings, on the shirt colour), "jacket" (varsity print)
+    top   "shade" (folds on the shirt colour), "hoodie" (pocket + strings, on the shirt colour), "jacket" (varsity print),
+          or a world v2 overlay print: "tee_star", "tee_stripe", "tee_heart", "tee_number", "tee_bolt", "shirt",
+          "cardigan", "jacket_open", "dungarees", "hoodie2"
     legs  "legs" (belt + folds on the pants colour) or "jeans" (blue jeans print)
     cuff  a hex colour for a band at the end of long sleeves (the jacket uses gold)
     """
@@ -268,10 +291,12 @@ def rchar(name, skin, shirt, pants, hair_style, hair_col, sleeves="short", strip
     body = T.empty(name + ".body", (0, 0, 2.0), root)
     torso = rbox((2, 1, 2), (0, 0, 1.0), plastic(shirt, 0.5), body, bv=0.08)
     decal(print_mat(shirt, top), (1.9, 1.9), (0, -0.506, 1.0), body)
+    if DETAIL:                                                       # world v2: a collar ring under the head
+        rbox((1.16, 0.96, 0.14), (0, 0, 2.02), plastic(shade(shirt, 0.8), 0.5), body, bv=0.05)
     if stripes:
         for i in range(4):
             rbox((2.04, 1.04, 0.2), (0, 0, 0.32 + i * 0.44), plastic(stripes, 0.5), body, bv=0.03)
-    if strings and top != "hoodie":
+    if strings and top not in ("hoodie", "hoodie2"):
         for sx in (-0.22, 0.22):
             rbox((0.08, 0.05, 0.62), (sx, -0.53, 1.6), plastic("#FFFFFF"), body, bv=0.02)
     if tie:
@@ -280,7 +305,8 @@ def rchar(name, skin, shirt, pants, hair_style, hair_col, sleeves="short", strip
     parts = {"name": name, "root": root, "body": body, "torso": torso, "skin": skin, "scale": scale,
              "look": "roblox", "face_fn": head_mat,
              "spec": dict(skin=skin, shirt=shirt, pants=pants, hair_style=hair_style, hair_col=hair_col, sleeves=sleeves,
-                          stripes=stripes, strings=strings, tie=tie, shoes=shoes, scale=scale, seed=seed)}
+                          stripes=stripes, strings=strings, tie=tie, shoes=shoes, scale=scale, seed=seed,
+                          top=top, legs=legs, cuff=cuff)}
     sleeve_m = plastic("#EDEDF0" if top == "jacket" else shirt, 0.5)
     cut = 0.95 if sleeves == "short" else 1.62
     for side, sx in (("L", -1), ("R", 1)):
@@ -288,6 +314,8 @@ def rchar(name, skin, shirt, pants, hair_style, hair_col, sleeves="short", strip
         rbox((1, 1, cut), (0, 0, -cut / 2 + 0.05), sleeve_m, sh, bv=0.08)
         if cuff or top == "jacket":
             rbox((1.02, 1.02, 0.14), (0, 0, -cut + 0.12), plastic(cuff or "#D6A83A", 0.4), sh, bv=0.03)
+        elif DETAIL:                                                 # world v2: a darker rim at the end of the sleeve
+            rbox((1.05, 1.05, 0.16), (0, 0, -cut + 0.13), plastic(shade(shirt, 0.8), 0.5), sh, bv=0.04)
         rbox((0.96, 0.96, 2 - cut), (0, 0, -cut - (2 - cut) / 2 + 0.05), ms, sh, bv=0.1)
         hip = T.empty(f"{name}.leg{side}", (sx * 0.5, 0, 0), body)
         rbox((0.99, 0.99, 1.66), (0, 0, -0.83), plastic(pants, 0.5), hip, bv=0.06)
@@ -535,17 +563,22 @@ def _before_render():
     _place_rain(T.TOD == "rain")
 
 
-def apply():
-    """Called by build_town(style="roblox"). Safe to call once."""
-    global ON
+def apply(detail=False):
+    """Called by build_town(style="roblox"). Safe to call once. detail=True (world v2) gives everyone sleeve rims and
+    collars, and the recurring cast their chest prints (OUTFITS2)."""
+    global ON, DETAIL
     if ON:
         return
     ON = True
+    DETAIL = detail
     # moods: horizon, zenith, sky strength, sun strength, sun colour, sun elevation, windows, bulbs, lamp watts, clouds
     T.TIMES["sun"] = T.TIMES["day"]
     T.TIMES["fog"] = ("#B4BFCC", "#9AA6B4", 1.0, 3.0, "#D9E2EE", 34, 1.2, 1.5, 600, 0.0)
     T.TIMES["rain"] = T.TIMES["fog"]
     for c in list(T.ALL):
-        restyle(c)
+        if detail and c["name"] in OUTFITS2:
+            restyle(c, **OUTFITS2[c["name"]])
+        else:
+            restyle(c)
     T.TOD_HOOKS.append(_on_mood)
     T.PRE_RENDER.append(_before_render)

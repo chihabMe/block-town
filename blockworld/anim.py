@@ -34,6 +34,8 @@ __all__ = [
     "EP", "FPS", "SCRIPT", "WT", "WE", "widx", "line", "at", "cut", "clamp", "smooth", "back", "snap", "mix", "osc",
     "size", "feet", "card", "put", "over", "eyes", "closeup", "stand", "walk", "run", "math", "Vector",
     "wcut", "wpop", "before_each_frame", "focus",
+    # action moves (ep09)
+    "sprint", "fall", "sit", "clap", "cheer", "gasp", "look_up", "drum", "juggle", "magic", "see_through", "dof",
 ]
 
 ARGS = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
@@ -218,6 +220,166 @@ def walk(c, x, y0, way, T, face, ph=0.0, speed=4.5, z=WALK):
          armL=(58 * sw, 10), armR=(-58 * sw, 10), legL=-48 * sw, legR=48 * sw, lean=-8, tilt=7 * sw)
 
 
+# ---------------------------------------------------------------- action moves (ep09: the camera and pose pack)
+def _fwd(yaw):
+    """The direction a character faces for a yaw (0 = -Y)."""
+    a = math.radians(yaw)
+    return Vector((math.sin(a), -math.cos(a), 0.0))
+
+
+def sprint(c, x, y0, way, T, face="scared", ph=0.0, speed=11.0, z=WALK, arms_up=False):
+    """Run (twice walk's speed, a deep lean, big arm pumps, a hop on every stride). way = 1 toward +Y, -1 back.
+    arms_up=True runs with both hands over the head (cats falling from the sky)."""
+    sw = math.sin(2 * math.pi * 3.2 * T + ph)
+    s = c["root"].scale[2]
+    arms = ((165, 25 + 10 * sw), (165, 25 - 10 * sw)) if arms_up else ((80 * sw, 12), (-80 * sw, 12))
+    pose(c, (x, y0 + way * speed * s * T, z + abs(sw) * 0.55 * s), 180 if way > 0 else 0, face,
+         armL=arms[0], armR=arms[1], legL=-62 * sw, legR=62 * sw, lean=-20, tilt=5 * sw)
+
+
+def fall(c, loc, yaw, face, k, T=0.0):
+    """Trip and fall flat on the face: k = 0 standing, 1 lying on the ground (use smooth or back for k).
+    Arms fly forward, one leg kicks up, a small bounce when he lands."""
+    k = clamp(k)
+    land = max(0.0, k - 0.85) / 0.15
+    bounce = 0.25 * math.sin(min(1.0, land) * math.pi) if k > 0.85 else 0.0
+    s = c["root"].scale[2]
+    f = _fwd(yaw)
+    p = Vector(loc) + f * (1.4 * s * k) + Vector((0, 0, (-1.45 * k + bounce) * s))
+    pose(c, tuple(p), yaw, face, armL=(160 * k, 25), armR=(150 * k, 15), legL=-20 * k, legR=-60 * k,
+         head=(0, 40 * k), lean=-88 * k)
+
+
+def sit(c, loc, yaw, face, T, ph=0.0, **kw):
+    """Sit on a chair whose seat is at loc's z + 2 (the hall's seats): legs straight ahead, hands on the knees.
+    Extra keywords (armL, armR, head, lean) override, e.g. sit(..., armR=(170, 20)) to raise a hand."""
+    kw.setdefault("armL", (55 + osc(T, 0.5, 2, ph), 8))
+    kw.setdefault("armR", (55 + osc(T, 0.5, -2, ph), 8))
+    kw.setdefault("head", (osc(T, 0.33, 4, ph), osc(T, 0.5, 2, ph)))
+    pose(c, loc, yaw, face, legL=88, legR=88, **kw)
+
+
+def clap(c, loc, yaw, face, T, ph=0.0, seated=False, hz=3.2):
+    """Clap in front of the chest, hands meeting about hz times a second."""
+    o = 22 * abs(math.sin(math.pi * hz * T + ph))
+    kw = dict(armL=(78, -24 + o), armR=(78, -24 + o), head=(osc(T, 0.4, 5, ph), 6))
+    (sit if seated else stand)(c, loc, yaw, face, T, ph, **kw)
+
+
+def cheer(c, loc, yaw, face, T, ph=0.0, seated=False):
+    """Both arms up and waving, a little jump (standing) or a bounce in the seat."""
+    w = math.sin(2 * math.pi * 2.4 * T + ph)
+    hop = abs(math.sin(2 * math.pi * 1.6 * T + ph)) * (0.25 if seated else 0.7) * c["root"].scale[2]
+    kw = dict(armL=(165, 28 + 12 * w), armR=(165, 28 - 12 * w), head=(0, 12))
+    l = Vector(loc) + Vector((0, 0, hop))
+    (sit if seated else stand)(c, tuple(l), yaw, face, T, ph, **kw)
+
+
+def gasp(c, loc, yaw, k, T, ph=0.0, seated=False, face="shock"):
+    """Hands fly to the cheeks and the body jolts back: k 0 -> 1 (use wpop or snap)."""
+    k = clamp(k)
+    kw = dict(armL=(mix(5, 150, k), mix(5, -32, k)), armR=(mix(5, 150, k), mix(5, -32, k)), head=(0, 8 * k),
+              lean=10 * k)
+    (sit if seated else stand)(c, loc, yaw, face, T, ph, **kw)
+
+
+def look_up(c, loc, yaw, face, T, k=1.0, ph=0.0, point=False):
+    """Look straight up at the sky (the narrator): head back, a step back, one arm pointing up if point."""
+    k = clamp(k)
+    kw = dict(head=(osc(T, 0.3, 3, ph), 55 * k), lean=12 * k)
+    if point:
+        kw["armR"] = (mix(5, 165, k), 10)
+    stand(c, loc, yaw, face, T, ph, **kw)
+
+
+def drum(c, loc, yaw, face, T, bpm=240, ph=0.0):
+    """Sit behind drum_kit() and hit it: sticks come down in turn on every beat, the head bangs on the beat."""
+    b = 2 * math.pi * (bpm / 60.0) * T / 2 + ph
+    l, r = abs(math.sin(b)), abs(math.cos(b))
+    pose(c, loc, yaw, face, legL=80, legR=80, armL=(40 + 50 * l, 10), armR=(40 + 50 * r, 10),
+         head=(0, -8 + 10 * abs(math.sin(2 * b))), lean=-6)
+
+
+def juggle(c, loc, yaw, face, T, balls, hz=1.1, height=4.5, ph=0.0, drop=None):
+    """Juggle: balls (from rprops.ball) loop between the hands in a cascade, the arms toss in turn.
+    drop = (ball index, seconds since it slipped): that ball falls to the floor and bounces away."""
+    n = len(balls)
+    s = c["root"].scale[2]
+    f = _fwd(yaw)
+    side = Vector((f.y * -1, f.x, 0)) * -1                      # the character's armR side when facing the camera
+    base = Vector(loc) + Vector((0, 0, 3.0 * s)) + f * 1.2 * s
+    toss = math.sin(2 * math.pi * hz * n / 2 * T + ph)
+    stand(c, loc, yaw, face, T, ph, armL=(70 + 25 * max(0, toss), -5), armR=(70 + 25 * max(0, -toss), -5),
+          head=(0, 30))
+    for i, b in enumerate(balls):
+        u = (hz * T + i / n) % 1.0                              # 0 -> 1 around the loop
+        x = math.cos(2 * math.pi * u) * 1.3 * s
+        z = max(0.0, math.sin(2 * math.pi * u)) * height * s
+        p = base + side * x + Vector((0, 0, z))
+        if drop and drop[0] == i and drop[1] >= 0:
+            tt = drop[1]
+            zz = max(0.0, p.z - 0.5 * 30 * tt * tt)
+            if zz <= Vector(loc).z + 0.45:                     # on the floor: roll off forward
+                zz = Vector(loc).z + 0.45 + 0.6 * abs(math.sin(6 * tt)) * math.exp(-3 * tt)
+            p = Vector((p.x, p.y, zz)) + f * 3.0 * tt
+        b.location = p
+
+
+def magic(c, loc, yaw, face, T, k, ph=0.0):
+    """The magic reveal: the cap comes off in the right hand and goes up high (k 0 -> 1). Parent a rabbit to the cap
+    first: rprops.rabbit(parent=cap_object). Returns nothing; the cap rides on the hand."""
+    k = clamp(k)
+    stand(c, loc, yaw, face, T, ph, armR=(mix(10, 170, k), 12), armL=(mix(5, 60, k), 30 * k), head=(-10 * k, 20 * k))
+
+
+def dof(k=1.0):
+    """Background blur for this shot (world v2 renderer): 0 = everything sharp, 1 = full blur. Without it, a shot that
+    calls focus(character) blurs by distance on its own: close-ups a lot, wide shots not at all."""
+    town.DOF = k
+
+
+_GHOST_UNDO = []          # (object, slot, material) and (object, None, hide_render) to put back at the next frame
+
+
+def _ghost_undo(T):
+    for o, i, v in reversed(_GHOST_UNDO):
+        if i is None:
+            o.hide_render = v
+        else:
+            o.data.materials[i] = v
+    _GHOST_UNDO.clear()
+
+
+def see_through(c, k):
+    """Draw a character see-through: k = 1 solid, 0.35 a ghost nobody notices. Call it inside a shot AFTER the pose
+    (stand / walk / pose set the face again). Every frame starts solid. Printed decals (shirt prints) hide meanwhile."""
+    k = round(clamp(k) * 20) / 20
+    if k >= 1:
+        return
+    if _ghost_undo not in RESETS:
+        before_each_frame(_ghost_undo)
+    for o in c["root"].children_recursive:
+        if o.type not in ("MESH", "FONT") or not o.data or o.hide_render:
+            continue
+        for i, m in enumerate(o.data.materials):
+            if m is None or m.name.startswith("ghost"):
+                continue
+            b = m.node_tree.nodes.get("Principled BSDF") if m.use_nodes else None
+            if b is None or b.inputs["Alpha"].is_linked:      # a printed decal: hide it while see-through
+                _GHOST_UNDO.append((o, None, o.hide_render))
+                o.hide_render = True
+                break
+            key = f"ghost{k:.2f}|{m.name}"
+            g = bpy.data.materials.get(key)
+            if g is None:
+                g = m.copy()
+                g.name = key
+                g.node_tree.nodes["Principled BSDF"].inputs["Alpha"].default_value = k
+                g.surface_render_method = "BLENDED"
+            _GHOST_UNDO.append((o, i, m))
+            o.data.materials[i] = g
+
+
 # ---------------------------------------------------------------- word-index helpers (the Roblox-look episodes)
 def wcut(i):
     """The cut time for script word i (0-based index into script.txt's words): 0.04 s before it is spoken."""
@@ -267,6 +429,7 @@ def run(shots, end=None, tod="day"):
 
     def frame(T):
         town.NOW = T
+        town.DOF = None
         time_of_day(tod)
         for i, c in enumerate(town.CHARACTERS):
             size(c, c["scale"])

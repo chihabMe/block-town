@@ -19,7 +19,8 @@ settings, and the steps from an idea to a finished vertical video. The skill fol
 file; it is called `SKILL` below. Episodes live outside it (the user names the folder), called `EPISODE` below. Use
 absolute paths.
 
-Read before building: `docs/RESEARCH.md` (gate 0 research with Apify, gate 1's five ideas), `docs/ROBLOX_LOOK.md` (the world, the cast, the props, how shots are made),
+Read before building: `docs/RESEARCH.md` (gate 0 research with Apify, gate 1's five ideas), `docs/WORLD_V2.md`
+(the dressed town, 24 faces, outfits, camera pack and post-processed picture, on by default), `docs/ROBLOX_LOOK.md` (the world, the cast, the props, how shots are made),
 `docs/RENDER.md` (the Three.js renderer, the life layer, tags, phone screens and printed props),
 `docs/SCRIPT.md` (how the story is written), `docs/VOICE.md` (voice and music), `docs/SOUND.md` (sound effects,
 ElevenLabs, the steady-voice mix). `docs/PROMPTS.md` has a prompt for each stage. `docs/GUIDE.md` is the original
@@ -117,6 +118,8 @@ finished episode made this way, with its design sheet, 42 shots, phone pictures,
   in 0.08 s against 0.165 s at full size, and the Blender bake (~1 min plus ~0.055 s a frame) is the same for both.
   For 66 s that is about 6 min for the draft, about 9 min for a full-size 30 fps render, and well over an hour for the
   240 fps motion-blur final.
+  With World v2 (merged 2026-11-13) everything is slower: the bake takes ~0.13 s a frame, and drawing takes 0.13 s a
+  frame for the draft against ~0.22 s at full size. A 10 s draft of ep08 took about 4 min end to end.
 - Review rounds happen on the draft: fix the notes, then re-render only the changed shots with
   `render_threejs.sh EPISODE --draft F0 F1`, and run `finish.py EPISODE --draft`.
 - The final render happens once, after the user says the draft is right.

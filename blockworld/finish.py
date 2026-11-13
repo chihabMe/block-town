@@ -174,6 +174,7 @@ def video_chain(conf, start, plain=False):
                 "blur": how many rendered frames are averaged into one output frame (4: 240 -> 60 fps, a full shutter).
                 "grade": {"word": 24, "ramp": 0.5, "saturation": 0.6, "brightness": -0.05, "cool": 0.1, "vignette": true}
                          from that script word on, the picture fades over ramp seconds to a colder, darker, flatter look.
+                         Add "until_word": 254 to fade back to the normal colours from that word (a happy ending).
     plain=True keeps every rendered frame step but no blur and no grade, at 30 fps: the "before" version for a
     side-by-side."""
     fps = int(conf.get("render_fps", 30))
@@ -195,7 +196,11 @@ def video_chain(conf, start, plain=False):
         look.append(f"colorbalance=rs={-c:.3f}:bs={c:.3f}:rm={-c / 2:.3f}:bm={c / 2:.3f}:rh={-c / 2:.3f}:bh={c / 3:.3f}")
     if g.get("vignette", True):
         look.append("vignette=angle=0.55")
-    ramp = f"blend=all_expr='A+(B-A)*clip((T-{t0:.3f})/{r:.3f},0,1)'"
+    k = f"clip((T-{t0:.3f})/{r:.3f},0,1)"
+    if "until_word" in g:                                # the colours come back (the story turns good again)
+        t1 = start[int(g["until_word"])] - 0.04
+        k += f"*(1-clip((T-{t1:.3f})/{r:.3f},0,1))"
+    ramp = f"blend=all_expr='A+(B-A)*{k}'"
     return chain, (",".join(look), ramp), out_fps
 
 

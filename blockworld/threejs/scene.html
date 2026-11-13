@@ -15,13 +15,28 @@
 // Coordinates stay Blender's (Z up), so Blender matrices are used as they are.
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
+import { GTAOPass } from "three/addons/postprocessing/GTAOPass.js";
+import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
+import { BokehPass } from "three/addons/postprocessing/BokehPass.js";
+import { ShaderPass } from "three/addons/postprocessing/ShaderPass.js";
+import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
+
+// World v2 look (on by default): contact shading, glow, depth of field, distance haze, a studio-light reflection and
+// a colour grade. scene.html?post=0 draws the plain v1 picture; ?ao=0 &bloom=0 &dof=0 &fog=0 &grade=0 switch one off.
+// ?focus=9 forces depth of field at 9 studs (to test a bake that has no focus data).
+const Q = new URLSearchParams(location.search);
+const on = (k) => Q.get("post") !== "0" && Q.get(k) !== "0";
+const POST = Q.get("post") !== "0";
 
 const W = 1080, H = 1920;
 // ?s=0.5 draws a smaller frame (the draft: 540x960). The picture is the same, only fewer pixels.
-const S = Math.min(1, Math.max(0.25, Number(new URLSearchParams(location.search).get("s") || 1)));
+const S = Math.min(1, Math.max(0.25, Number(Q.get("s") || 1)));
+const RW = Math.round(W * S), RH = Math.round(H * S);      // the drawn size: the canvas and every pass buffer
 const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
 renderer.setPixelRatio(1);
-renderer.setSize(Math.round(W * S), Math.round(H * S));
+renderer.setSize(RW, RH);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.NoToneMapping;
 renderer.shadowMap.enabled = true;
@@ -41,6 +56,7 @@ const camera = new THREE.PerspectiveCamera(50, W / H, 0.05, 2000);
 camera.matrixAutoUpdate = false;
 scene.add(camera);
 const OVERLAY = 1;            // tags and bubbles: drawn in a second pass, on top of everything
+if (on("fog")) scene.fog = new THREE.Fog(0xffffff, 50, 520);          // distance haze in the sky's horizon colour
 
 // ---------------------------------------------------------------- sky (Blender: Generated Z -> colour ramp)
 const skyU = { hor: { value: new THREE.Vector3() }, zen: { value: new THREE.Vector3() }, top: { value: 0.45 },
@@ -62,13 +78,23 @@ skyDome.renderOrder = -1;
 scene.add(skyDome);
 const envScene = new THREE.Scene();
 envScene.add(new THREE.Mesh(new THREE.SphereGeometry(100, 48, 24), skyMaterial(false)));
+const boxMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });   // "softboxes": only in
+if (on("studio")) {                                                     // reflections, they give plastic its highlights
+  for (const [x, y, z, w, h] of [[-55, -40, 70, 60, 26], [60, 30, 62, 44, 20], [0, 70, 80, 70, 16]]) {
+    const card = new THREE.Mesh(new THREE.PlaneGeometry(w, h), boxMat);
+    card.position.set(x, y, z); card.lookAt(0, 0, 0);
+    envScene.add(card);
+  }
+}
 const pmrem = new THREE.PMREMGenerator(renderer);
 let envKey = "", envTarget = null;
 function setSky(s) {
   skyU.hor.value.set(s[0], s[1], s[2]); skyU.zen.value.set(s[3], s[4], s[5]); skyU.k.value = s[6];
+  if (scene.fog) scene.fog.color.setRGB(s[0] * s[6], s[1] * s[6], s[2] * s[6], THREE.LinearSRGBColorSpace);
   const key = s.join(",");
   if (key !== envKey) {                         // re-light only when the sky changes (dusk flashback)
     envKey = key;
+    boxMat.color.setScalar(2.0 * Math.min(1, s[6]) * Math.max(s[3], s[4], s[5]));     // dimmer under a night sky
     if (envTarget) envTarget.dispose();
     envTarget = pmrem.fromScene(envScene, 0);
     scene.environment = envTarget.texture;
@@ -78,7 +104,10 @@ function setSky(s) {
 // ---------------------------------------------------------------- lights
 const sun = new THREE.DirectionalLight(0xffffff, 3);
 sun.castShadow = true;
-sun.shadow.mapSize.set(S < 1 ? 2048 : 4096, S < 1 ? 2048 : 4096);   // the draft gets a lighter shadow map
+const SHADOW = POST && renderer.capabilities.maxTextureSize >= 8192 ? { map: 8192, half: 40, ahead: 22 }
+                                                                  : { map: 4096, half: 22, ahead: 14 };
+const SMAP = S < 1 ? Math.min(2048, SHADOW.map) : SHADOW.map;   // the draft gets a lighter shadow map
+sun.shadow.mapSize.set(SMAP, SMAP);
 sun.shadow.bias = -0.0004;
 sun.shadow.normalBias = 0.03;
 sun.shadow.radius = 3;
@@ -166,6 +195,9 @@ function makeMat(name, d) {
       .replace("#include <map_fragment>", "#include <map_fragment>\n" + frag)
       .replace("#include <lights_fragment_end>", "#include <lights_fragment_end>\n reflectedLight.directSpecular *= specK; reflectedLight.indirectSpecular *= specK;");
   };
+  if (d.alpha !== undefined && d.alpha < 0.999) {   // see-through (a ghost, a spotlight beam)
+    m.transparent = true; m.opacity = d.alpha; m.depthWrite = false;
+  }
   m.customProgramCacheKey = () => name;
   return m;
 }
@@ -204,6 +236,52 @@ function place(hid, arr, off, v) {
 }
 for (const [hid, s] of Object.entries(A.static)) place(hid, s.m, 0, s.v);
 
+// ---------------------------------------------------------------- the v2 picture: passes after the plain render
+const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(RW, RH, { type: THREE.HalfFloatType, samples: 4 }));
+composer.setPixelRatio(1);
+composer.setSize(RW, RH);
+composer.addPass(new RenderPass(scene, camera));
+const hideIf = (test) => {                       // see-through things must not shade or focus like solid ones
+  const list = [];
+  scene.traverse((o) => { if (o.isMesh && o.visible && test(o.material)) { o.visible = false; list.push(o); } });
+  return () => { for (const o of list) o.visible = true; };
+};
+const gtao = new GTAOPass(scene, camera, RW, RH);  // soft shade where things touch: feet on the ground, arms on bodies
+gtao.updateGtaoMaterial({ radius: 1.6, distanceExponent: 1.3, thickness: 1.4, scale: 1.15, samples: 16, screenSpaceRadius: false });
+gtao.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 5, rings: 2, samples: 16 });
+gtao.blendIntensity = 0.85;
+gtao.enabled = on("ao");
+{ const ov = gtao._overrideVisibility.bind(gtao), rv = gtao._restoreVisibility.bind(gtao);
+  let back = null;
+  gtao._overrideVisibility = () => { ov(); back = hideIf((m) => m.transparent); };
+  gtao._restoreVisibility = () => { rv(); if (back) back(); }; }
+composer.addPass(gtao);
+const bokeh = new BokehPass(scene, camera, { focus: 10, aperture: 0.0004, maxblur: 0.0085 });   // background blur
+{ const render = bokeh.render.bind(bokeh);
+  bokeh.render = (...a) => { const back = hideIf((m) => m.transparent && m.opacity < 0.2); render(...a); back(); }; }
+bokeh.enabled = false;
+composer.addPass(bokeh);
+const bloom = new UnrealBloomPass(new THREE.Vector2(RW, RH), 0.22, 0.45, 1.55);   // glow around lit screens, lamps, tags
+bloom.enabled = on("bloom");
+composer.addPass(bloom);
+const grade = new ShaderPass({
+  uniforms: { tDiffuse: { value: null }, sat: { value: 1.04 }, con: { value: 1.07 }, vig: { value: 0.16 } },
+  vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+  fragmentShader: `uniform sampler2D tDiffuse; uniform float sat, con, vig; varying vec2 vUv;
+    void main(){ vec4 c = texture2D(tDiffuse, vUv); vec3 x = max(c.rgb, 0.0);
+      vec3 hi = 0.8 + 0.2 * (1.0 - exp(-(x - 0.8) / 0.2));              // highlights roll off, they do not clip
+      x = mix(x, hi, step(0.8, x));
+      float l = dot(x, vec3(0.2126, 0.7152, 0.0722));
+      x = mix(vec3(l), x, sat);                                         // a little richer
+      x = 0.18 * pow(x / 0.18, vec3(con));                              // a little more contrast around mid grey
+      vec2 q = (vUv - 0.5) * vec2(1.0, 0.8);
+      x *= 1.0 - vig * smoothstep(0.28, 0.72, length(q));               // darker corners pull the eye to the middle
+      gl_FragColor = vec4(x, c.a); }`,
+});
+grade.enabled = on("grade");
+composer.addPass(grade);
+composer.addPass(new OutputPass());
+
 const fwd = new THREE.Vector3(), tmp = new THREE.Matrix4(), focus = new THREE.Vector3();
 window.renderAt = (i) => {
   const t0 = performance.now();
@@ -223,12 +301,12 @@ window.renderAt = (i) => {
   tmp.fromArray(s.m);
   const dir = new THREE.Vector3(-tmp.elements[8], -tmp.elements[9], -tmp.elements[10]).normalize();
   fwd.set(-camera.matrixWorld.elements[8], -camera.matrixWorld.elements[9], -camera.matrixWorld.elements[10]);
-  focus.setFromMatrixPosition(camera.matrixWorld).addScaledVector(fwd, 14);
+  focus.setFromMatrixPosition(camera.matrixWorld).addScaledVector(fwd, SHADOW.ahead);
   sun.target.position.copy(focus);
   sun.position.copy(focus).addScaledVector(dir, -120);
   sun.color.setRGB(s.c[0], s.c[1], s.c[2], THREE.LinearSRGBColorSpace);
   sun.intensity = s.e;
-  const sc = sun.shadow.camera; sc.left = -22; sc.right = 22; sc.top = 22; sc.bottom = -22; sc.near = 60; sc.far = 220;
+  const sc = sun.shadow.camera; sc.left = sc.bottom = -SHADOW.half; sc.right = sc.top = SHADOW.half; sc.near = 40; sc.far = 240;
   sc.updateProjectionMatrix();
   const k = A.key[i];
   key.position.set(k.p[0], k.p[1], k.p[2]);
@@ -238,7 +316,19 @@ window.renderAt = (i) => {
   renderer.clear();
   renderer.shadowMap.needsUpdate = true;
   camera.layers.set(0);
-  renderer.render(scene, camera);
+  if (POST) {
+    const fd = Q.get("focus") ? Number(Q.get("focus")) : c.focus, k = Q.get("focus") ? 1 : (c.dof || 0);
+    bokeh.enabled = on("dof") && fd > 0 && k > 0.001;
+    if (bokeh.enabled) {
+      bokeh.uniforms.focus.value = fd;
+      bokeh.uniforms.aperture.value = 0.0012 * k;
+      bokeh.uniforms.maxblur.value = 0.012 * k;
+    }
+    const day = Math.min(1, s.e / 3);                              // strong glow at night; by day only the very
+    bloom.strength = 0.25 - 0.13 * day;                             // brightest things glow, so signs stay crisp
+    bloom.threshold = 1.5 + 1.3 * day;
+    composer.render();
+  } else renderer.render(scene, camera);
   renderer.clearDepth();
   camera.layers.set(OVERLAY);
   renderer.render(scene, camera);
