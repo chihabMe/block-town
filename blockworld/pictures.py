@@ -19,6 +19,7 @@ chat extras: ["me", ["line"]] is your own blue bubble on the right, ["note", "De
   "dark": true night mode, "time": "3:00" the status-bar clock, "draft": "M" text typed but not sent (send button),
   "text_size": 76 bigger bubble text (default 58),
   "who": "unknown" a grey "?" contact picture.
+  {"kind": "device", "header": "OXYGEN", "status": "ON BATTERY", "big": "10:00", "unit": "MINUTES LEFT", "flow": "3 L/min"}   a machine display
   {"kind": "town_map", "title": "TOWN MAP"}                                    the folded paper map
   {"kind": "class_photo", "title": "CLASS 4B", "empty": 3}                     a printed class photo, one empty chair
 "avatar": {"face": "smile", "skin": [235, 200, 168], "hair": [222, 226, 232]} draws any contact picture.
@@ -441,7 +442,26 @@ def class_photo(s=None):
     return im
 
 
-KINDS = {"wifi_search": wifi_search, "calling": calling, "hotspot": hotspot, "chat": chat, "notice": notice,
+def device(s):
+    """A medical-device / appliance display (portrait): header, status bar, one big number, a unit line and a flow line.
+    {"header": "OXYGEN", "status": "ON BATTERY", "big": "10:00", "unit": "MINUTES LEFT", "flow": "3 L/min", "colour": [255, 170, 40]}"""
+    colour = tuple(s.get("colour", [255, 170, 40]))
+    im = base((10, 16, 30), (4, 8, 18))
+    d = ImageDraw.Draw(im)
+    d.text((70, 150), s.get("header", "DEVICE"), font=font("bold", 120), fill=(190, 205, 235))
+    d.rounded_rectangle([50, 360, W - 50, 560], 60, fill=colour)
+    centred(d, 400, s.get("status", ""), font("black", 110), (20, 22, 30))
+    centred(d, 760, s.get("big", ""), font("black", 330), WHITE)
+    centred(d, 1180, s.get("unit", ""), font("bold", 84), colour)
+    d.line([(90, 1420), (W - 90, 1420)], fill=(60, 72, 100), width=6)
+    centred(d, 1520, s.get("flow", ""), font("semibold", 110), (190, 205, 235))
+    for i in range(5):
+        d.rounded_rectangle([160 + i * 160, 1850, 160 + i * 160 + 120, 1990], 24,
+                            fill=colour if i < int(s.get("pips", 3)) else (40, 50, 74))
+    return im
+
+
+KINDS = {"device": device, "wifi_search": wifi_search, "calling": calling, "hotspot": hotspot, "chat": chat, "notice": notice,
          "lock": lock, "town_map": town_map, "night_text": night_text,
          "class_photo": class_photo}
 
