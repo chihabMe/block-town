@@ -1,11 +1,11 @@
-# World v2 (branch `world-v2`)
+# World v2
 
 A richer town, more expressive faces, dressed characters, a camera pack and a film-like picture. Old episode code runs
-unchanged and gets the new look; the new pieces are opt-in calls.
+unchanged and gets the new look. The places and the cast live in this same skill folder.
 
-World v2 was made on branch `world-v2` (folder `block-town-video-v2`, a git worktree) and merged into `main` on
-2026-11-13, together with the research / five ideas / opening variants / draft-and-final flow from `roblox-look`.
-`build_town(..., detail=False)` and `TJ_QUERY="post=0"` still give the v1 street and picture (see Switches).
+World v2 was built on branch `world-v2` and merged into `main` on 2026-11-13, together with the research, five ideas,
+opening variants and draft-and-final flow. `build_town(..., detail=False)` and `TJ_QUERY="post=0"` still give the v1
+street and picture (see Switches). The place list, marks and cameras are in `docs/PLACES.md`.
 
 ## What changed
 
@@ -31,3 +31,13 @@ World v2 was made on branch `world-v2` (folder `block-town-video-v2`, a git work
 World v2 keeps props out of the lanes episodes use: the road between x = -8 and 8, and the sidewalk between
 |x| = 14 and 19. Fences run at |x| = 21.7, benches and bins at |x| = 20, hydrants at |x| = 13.3 beside the lamp
 posts, parked cars at |x| = 9.2 (y = -52, -28, 6, 172). `check` still reports anything within 1 stud of the lens.
+
+## The world library
+
+Places are modules in `blockworld/places/`. An episode calls `place(name, ...)` for each place the story uses, and the
+others stay unloaded. `build_town(...)` is `place("street", ...)`. People who are not one of the eight recurring
+characters come from `blockworld/cast.py` (`cast.get`, `cast.role`, `cast.crowd`). Marks, cameras, parking spots and
+the words that change per video are in `docs/PLACES.md`.
+
+Meshes come from unit templates (`town.prim`), not one primitive call each. The street builds in about 2.5 seconds.
+Saving a place to `places/cache/` is off, because building is faster than loading. `BT_PLACE_CACHE=1` turns the cache on.

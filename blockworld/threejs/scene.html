@@ -104,8 +104,9 @@ function setSky(s) {
 // ---------------------------------------------------------------- lights
 const sun = new THREE.DirectionalLight(0xffffff, 3);
 sun.castShadow = true;
-const SHADOW = POST && renderer.capabilities.maxTextureSize >= 8192 ? { map: 8192, half: 40, ahead: 22 }
-                                                                  : { map: 4096, half: 22, ahead: 14 };
+const SHADOW = Q.get("shadow") ? { map: Number(Q.get("shadow")), half: 40, ahead: 22 }
+             : POST ? { map: 4096, half: 40, ahead: 22 }
+             : { map: 4096, half: 22, ahead: 14 };
 const SMAP = S < 1 ? Math.min(2048, SHADOW.map) : SHADOW.map;   // the draft gets a lighter shadow map
 sun.shadow.mapSize.set(SMAP, SMAP);
 sun.shadow.bias = -0.0004;
@@ -251,6 +252,9 @@ gtao.updateGtaoMaterial({ radius: 1.6, distanceExponent: 1.3, thickness: 1.4, sc
 gtao.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 5, rings: 2, samples: 16 });
 gtao.blendIntensity = 0.85;
 gtao.enabled = on("ao");
+{ const AOS = Number(Q.get("aoscale") || "0.5");
+  if (AOS !== 1) { const ss = gtao.setSize.bind(gtao); gtao.setSize = (w, h) => ss(Math.round(w * AOS), Math.round(h * AOS));
+                   gtao.setSize(RW, RH); } }
 { const ov = gtao._overrideVisibility.bind(gtao), rv = gtao._restoreVisibility.bind(gtao);
   let back = null;
   gtao._overrideVisibility = () => { ov(); back = hideIf((m) => m.transparent); };

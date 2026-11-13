@@ -6,8 +6,9 @@
 # The draft is for review rounds: same shots, life layer and tags, a quarter of the pixels, no 240 fps pass, a lighter
 # shadow map and smaller JPEGs. Then `finish.py EPISODE --draft` makes <name>_draft.mp4. The final render (no --draft)
 # uses finish.json's "render_fps" and full 1080x1920. Draft and final frames live in different folders.
-# Two steps: Blender poses every frame from the episode code and records it (bake, ~0.1 s a frame plus ~1 min to build
-# the town), then Three.js draws the frames in headless Chrome (~0.1-0.15 s a frame). A 66 s episode takes ~10 min.
+# Two steps: Blender builds only the places the episode names (a few seconds), poses every frame and records it
+# (bake), then Three.js draws the frames in headless Chrome. The bake runs to the end of the episode when F1 is
+# omitted, and it writes shots.json, so there is no separate check run.
 # BT_LIFE=1 (the default here) adds the life layer (blockworld/life.py); BT_LIFE=0 turns it off.
 # Run it in the background if your commands time out. The bake is kept in EPISODE/threejs/ (delete it when done).
 set -euo pipefail
@@ -30,12 +31,8 @@ else
   export TJ_SCALE=1
   FRAMES="$EP/frames"
 fi
-if [ ! -f "$EP/shots.json" ]; then
-  blender -b --factory-startup --python-exit-code 1 -P "$SKILL/blockworld/run.py" -- "$EP" check >/dev/null
-fi
-LAST=$(python3 -c "import json,math,sys; s=json.load(open(sys.argv[1])); print(math.ceil(s[-1]['start']*int(sys.argv[2]))-1)" "$EP/shots.json" "$BT_FPS")
 F0="${ARGS[1]:-0}"
-F1="${ARGS[2]:-$LAST}"
+F1="${ARGS[2]:-}"
 if [ ! -d "$SKILL/blockworld/threejs/node_modules/three" ]; then
   echo "first run: installing three and puppeteer-core in $SKILL/blockworld/threejs"
   (cd "$SKILL/blockworld/threejs" && npm install --no-audit --no-fund)
@@ -43,11 +40,14 @@ fi
 DATA="$EP/threejs"
 mkdir -p "$DATA"
 MODE=$([ "$DRAFT" = 1 ] && echo "draft ${TJ_SCALE}x" || echo "final")
-echo "$(date +%H:%M:%S) bake frames $F0-$F1 at $BT_FPS fps ($MODE, life layer: $BT_LIFE)"
+echo "$(date +%H:%M:%S) bake frames $F0-${F1:-end} at $BT_FPS fps ($MODE, life layer: $BT_LIFE)"
 BT_TJ_OUT="$DATA" BT_FRAME_DIR="$DATA/unused" blender -b --factory-startup --python-exit-code 1 \
-  -P "$SKILL/blockworld/threejs/bake.py" -- "$EP" render "$F0" "$F1" > "$DATA/bake.log" 2>&1 \
+  -P "$SKILL/blockworld/threejs/bake.py" -- "$EP" render "$F0" ${F1:+"$F1"} > "$DATA/bake.log" 2>&1 \
   || { echo "bake failed: see $DATA/bake.log"; tail -20 "$DATA/bake.log"; exit 1; }
 grep -E "^TJ" "$DATA/bake.log" || true
+if [ -z "$F1" ]; then
+  F1=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['f1'])" "$DATA/anim.json")
+fi
 # capture.mjs skips frames that already exist. After a fix those are stale, so clear F0..F1 first;
 # BT_RESUME=1 keeps them (to finish a run that was stopped part way).
 if [ "${BT_RESUME:-0}" != 1 ] && [ -d "$FRAMES" ]; then
