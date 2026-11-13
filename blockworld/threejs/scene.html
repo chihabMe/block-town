@@ -321,7 +321,7 @@ window.renderAt = (i) => {
       bokeh.uniforms.maxblur.value = 0.012 * k;
     }
     const day = Math.min(1, s.e / 3);                              // strong glow at night; by day only the very
-    bloom.strength = 0.3 - 0.18 * day;                             // brightest things glow, so signs stay crisp
+    bloom.strength = 0.25 - 0.13 * day;                             // brightest things glow, so signs stay crisp
     bloom.threshold = 1.5 + 1.3 * day;
     composer.render();
   } else renderer.render(scene, camera);

@@ -101,7 +101,7 @@ def wide(c, t=0.0, d=1.0, dist=34.0, up=9.0, fov=50, side=6.0, drift=3.0, key_w=
     shot(pos, p + Vector((0, 0, 1.0)), fov, key_w=key_w)
 
 
-def extreme(c, t=0.0, part="eyes", fov=20, dist=4.6, side=0.25, push=0.35, key_w=0):
+def extreme(c, t=0.0, part="eyes", fov=20, dist=6.6, side=0.25, push=0.4, key_w=0):
     """Just the eyes (or the mouth): the moment a character realises something."""
     front_v, right = _dirs(c)
     s = c["root"].scale[2]
@@ -158,7 +158,8 @@ def follow(c, t=0.0, back_=7.5, side=2.4, rise=1.0, fov=44, lead=4.0, key_w=0):
 
 
 def two_shot(a, b, t=0.0, fov=40, dist=11.0, rise=0.2, push=0.5, key_w=0):
-    """Two people side on: the camera stands at right angles to the line between them."""
+    """Two people side on: the camera stands at right angles to the line between them and backs off until both
+    fit the narrow 9:16 frame (stand them 3-4 studs apart for big faces)."""
     ea, eb = eyes(a), eyes(b)
     mid = (ea + eb) / 2
     d = eb - ea
@@ -167,6 +168,8 @@ def two_shot(a, b, t=0.0, fov=40, dist=11.0, rise=0.2, push=0.5, key_w=0):
     n = Vector((d.y, -d.x, 0))
     if n.y > 0:                                # keep the camera on the road side when it can
         n = -n
+    half = math.tan(math.radians(fov) / 2) * 9 / 16          # half the frame's width per stud of distance (9:16)
+    dist = max(dist, ((eb - ea).length / 2 + 1.7) / half)    # far enough that both faces fit
     shot(mid + n * (dist - push * t) + Vector((0, 0, rise)), mid, fov, key_w=key_w)
 
 
