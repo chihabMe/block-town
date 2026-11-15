@@ -108,3 +108,18 @@ Rules that came from review:
 
 `BT_TJ_REF=1 BT_FRAME_DIR=/some/dir blender ... -P SKILL/blockworld/threejs/bake.py -- EPISODE render F0 F1` also
 renders the Blender frame for each baked frame, for side-by-side checks.
+
+## Capture controls
+
+- `TJ_CAPTURE=threads` (default): browser workers encode JPEGs; `TJ_THREADS=3` by default.
+- `TJ_CAPTURE=blob`: asynchronous canvas encoding. `canvas` and `screenshot` remain available.
+- `TJ_WORKERS=1`: browser count. More browsers require additional memory; benchmark before increasing.
+- `TJ_SOFTWARE=1`: opt into Chrome SwiftShader on machines without usable GPU acceleration (slower).
+- `TJ_RELAUNCH=1200`: restart each browser after this many frames to limit memory growth.
+- `BT_SPLIT=1`: opt into overlapping second-half baking with first-half capture on whole-episode renders.
+  It requires an existing `shots.json`; otherwise the normal single bake is used. Disabled by default.
+- `BT_RESUME=1`: reuse saved frames only when the scene and capture settings have not changed.
+
+JPEG saves use a temporary file followed by rename. Failed HTTP saves and worker failures are reported,
+with a bounded wait and up to three chunk attempts. Render failures close browsers and the local server.
+Effects and overlays use the new `fx` and `ov` bake fields; old bakes without them remain supported.

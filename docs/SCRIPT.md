@@ -66,3 +66,6 @@ Write it all into `EPISODE/SCRIPT.md` (`examples/ep05-wifi/SCRIPT.md` is the pat
 - Pop tags and faces on the word: `wpop(i)` returns 0 → 1 over 0.14 s when word `i` is spoken.
 - Phone screens, posters and signs are **inserts**: a close shot of the object, often while the line says it.
 - Every few shots, a wide shot of the street or the landmark so the viewer knows where they are.
+- Pop-up graphics (name tags, meters, "+1" pops, comic words, time cards, the top bar, the end card) come from
+  `blockworld/overlay.py`. House style: "Roblox game UI" (outlined text on a see-through dark plate) with yellow comic
+  words, picked by the user in Nov 2026. Its docstring lists every call.

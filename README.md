@@ -81,3 +81,11 @@ python3 -I blockworld/voice_check.py examples/ep05-wifi
 the steady-voice mix), `docs/VOICE.md` (voice and music), `docs/PROMPTS.md` (a prompt per step), `docs/GUIDE.md` (the original block-look
 manual). Sound effects in `sfx/` are from Pixabay (`sfx/CREDITS.md`); fonts are DejaVu Sans and Inter
 (licences in `blockworld/fonts/`).
+
+## Movement, creatures, and game UI
+
+The kit includes cartoon dances, jumps, reactions and crowd movement; monsters and animals;
+particle effects and colour moods; and sharp game-style labels, counters, time cards and end cards.
+See [the viral pack guide](docs/VIRAL_PACK.md) for usage and motion-capture credits.
+The renderer supports threaded JPEG capture, optional multiple browsers and optional split baking.
+See [render settings](docs/RENDER.md). Installations linked to this checkout update when you pull `main`.

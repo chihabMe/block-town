@@ -19,6 +19,8 @@ settings, and the steps from an idea to a finished vertical video. The skill fol
 file; it is called `SKILL` below. Episodes live outside it (the user names the folder), called `EPISODE` below. Use
 absolute paths.
 
+Read `docs/VIRAL_PACK.md` for cartoon moves, creatures, particle effects, game UI overlays, and optional motion capture. These features are included in this checkout; use the Three.js draft to review overlays and effects.
+
 Read before building: `docs/PLACES.md` (which place to load, its marks and its cameras), `docs/RESEARCH.md` (gate 0 research with Apify, gate 1's five ideas), `docs/WORLD_V2.md`
 (the dressed town, 24 faces, outfits, camera pack and post-processed picture, on by default), `docs/ROBLOX_LOOK.md` (the world, the cast, the props, how shots are made),
 `docs/RENDER.md` (the Three.js renderer, the life layer, tags, phone screens and printed props),
