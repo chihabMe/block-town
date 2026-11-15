@@ -10,7 +10,8 @@
 # (bake), then Three.js draws the frames in headless Chrome. The bake runs to the end of the episode when F1 is
 # omitted, and it writes shots.json, so there is no separate check run.
 # BT_LIFE=1 (the default here) adds the life layer (blockworld/life.py); BT_LIFE=0 turns it off.
-# Run it in the background if your commands time out. The bake is kept in EPISODE/threejs/ (delete it when done).
+# Run it in the background if your commands time out. The bake is kept in EPISODE/threejs/ (and threejs_b/ for the
+# second half of a split whole-episode render); delete them when done.
 set -euo pipefail
 SKILL="$(cd "$(dirname "$0")/.." && pwd)"
 DRAFT=0
@@ -40,19 +41,55 @@ fi
 DATA="$EP/threejs"
 mkdir -p "$DATA"
 MODE=$([ "$DRAFT" = 1 ] && echo "draft ${TJ_SCALE}x" || echo "final")
-echo "$(date +%H:%M:%S) bake frames $F0-${F1:-end} at $BT_FPS fps ($MODE, life layer: $BT_LIFE)"
-BT_TJ_OUT="$DATA" BT_FRAME_DIR="$DATA/unused" blender -b --factory-startup --python-exit-code 1 \
-  -P "$SKILL/blockworld/threejs/bake.py" -- "$EP" render "$F0" ${F1:+"$F1"} > "$DATA/bake.log" 2>&1 \
-  || { echo "bake failed: see $DATA/bake.log"; tail -20 "$DATA/bake.log"; exit 1; }
-grep -E "^TJ" "$DATA/bake.log" || true
-if [ -z "$F1" ]; then
-  F1=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['f1'])" "$DATA/anim.json")
+
+bake() {   # bake DATA F0 [F1]: pose and record frames F0..F1 (to the end when F1 is empty)
+  local data="$1" a="$2" b="${3:-}"
+  mkdir -p "$data"
+  BT_TJ_OUT="$data" BT_FRAME_DIR="$data/unused" blender -b --factory-startup --python-exit-code 1 \
+    -P "$SKILL/blockworld/threejs/bake.py" -- "$EP" render "$a" ${b:+"$b"} > "$data/bake.log" 2>&1 \
+    || { echo "bake failed: see $data/bake.log"; tail -20 "$data/bake.log"; return 1; }
+  grep -E "^TJ" "$data/bake.log" || true
+}
+clear_frames() {   # capture.mjs skips frames that already exist; after a fix they are stale. BT_RESUME=1 keeps them.
+  if [ "${BT_RESUME:-0}" != 1 ] && [ -d "$FRAMES" ]; then
+    python3 -c "import sys,pathlib; d=pathlib.Path(sys.argv[1]); [p.unlink() for p in d.glob('f_*.jpg') if int(sys.argv[2]) <= int(p.stem[2:]) <= int(sys.argv[3])]" "$FRAMES" "$1" "$2"
+  fi
+}
+draw() {   # draw DATA: Three.js draws every frame of that bake into FRAMES
+  TJ_DATA="$1" TJ_FRAMES="$FRAMES" node "$SKILL/blockworld/threejs/capture.mjs"
+}
+last_of() { python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['f1'])" "$1/anim.json"; }
+
+# Speed: a whole-episode render is split in two. The second half is baked (Blender, CPU) while the first half is
+# drawn (Chrome, GPU), so the two steps overlap. The split point comes from shots.json (any frame inside the episode
+# works). Off by default: on a 12-core laptop Blender and the JPEG threads fight for the CPU (311 s vs 316 s on
+# the 10 s test), so BT_SPLIT=1 turns it on for machines with spare cores.
+MID=""
+if [ -z "$F1" ] && [ "${BT_SPLIT:-0}" = 1 ] && [ -f "$EP/shots.json" ]; then
+  MID=$(python3 -c "import json,sys; s=json.load(open(sys.argv[1])); end=s[-1]['start']*int(sys.argv[2]); m=int(end*0.45); print(m if m-int(sys.argv[3])>=120 else '')" "$EP/shots.json" "$BT_FPS" "$F0")
 fi
-# capture.mjs skips frames that already exist. After a fix those are stale, so clear F0..F1 first;
-# BT_RESUME=1 keeps them (to finish a run that was stopped part way).
-if [ "${BT_RESUME:-0}" != 1 ] && [ -d "$FRAMES" ]; then
-  python3 -c "import sys,pathlib; d=pathlib.Path(sys.argv[1]); [p.unlink() for p in d.glob('f_*.jpg') if int(sys.argv[2]) <= int(p.stem[2:]) <= int(sys.argv[3])]" "$FRAMES" "$F0" "$F1"
+
+if [ -n "$MID" ]; then
+  DATA2="$EP/threejs_b"
+  echo "$(date +%H:%M:%S) bake frames $F0-$((MID-1)) at $BT_FPS fps ($MODE, life layer: $BT_LIFE)"
+  bake "$DATA" "$F0" "$((MID-1))"
+  echo "$(date +%H:%M:%S) bake frames $MID-end in the background; draw frames $F0-$((MID-1))"
+  bake "$DATA2" "$MID" > "$EP/.bake_b.out" 2>&1 &
+  BPID=$!
+  clear_frames "$F0" "$((MID-1))"
+  draw "$DATA"
+  wait "$BPID" || { cat "$EP/.bake_b.out"; exit 1; }
+  cat "$EP/.bake_b.out"; rm -f "$EP/.bake_b.out"
+  F1=$(last_of "$DATA2")
+  echo "$(date +%H:%M:%S) draw frames $MID-$F1"
+  clear_frames "$MID" "$F1"
+  draw "$DATA2"
+else
+  echo "$(date +%H:%M:%S) bake frames $F0-${F1:-end} at $BT_FPS fps ($MODE, life layer: $BT_LIFE)"
+  bake "$DATA" "$F0" "$F1"
+  [ -z "$F1" ] && F1=$(last_of "$DATA")
+  clear_frames "$F0" "$F1"
+  echo "$(date +%H:%M:%S) draw frames"
+  draw "$DATA"
 fi
-echo "$(date +%H:%M:%S) draw frames"
-TJ_DATA="$DATA" TJ_FRAMES="$FRAMES" node "$SKILL/blockworld/threejs/capture.mjs"
 echo "$(date +%H:%M:%S) done: $FRAMES ($(ls "$FRAMES" | grep -c '^f_.*\.jpg$') frames)"
