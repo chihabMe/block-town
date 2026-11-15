@@ -73,7 +73,7 @@ def write_captions(ep, script, start, stop):
             b = start[i + 1] - 0.03
         else:
             b = min(stop[i], start[i] + 0.6) + 0.25
-        clean = re.sub(r"[^\w']", "", word)
+        clean = re.sub(r"(?<!\d):|:(?!\d)", "", re.sub(r"[^\w':]", "", word))   # keep 2:59
         ass.append(f"Dialogue: 0,{ts(a)},{ts(b)},Cap,,0,0,0,,{{\\pos(540,1267)\\fscx82\\fscy82\\t(0,70,\\fscx108\\fscy108)\\t(70,130,\\fscx100\\fscy100)}}{clean}")
     path = ep / "captions.ass"
     path.write_text("\n".join(ass) + "\n")
@@ -93,7 +93,7 @@ def write_karaoke(ep, script, start, stop):
         if len(cur) == 3 or re.search(r"[.,!?:;]$", word) or i == len(script) - 1:
             groups.append(cur)
             cur = []
-    clean = [re.sub(r"[^\w'$%-]", "", w) for w in script]
+    clean = [re.sub(r"(?<!\d):|:(?!\d)", "", re.sub(r"[^\w':$%-]", "", w)) for w in script]   # keep 2:59
     for g, idx in enumerate(groups):
         g0 = start[idx[0]] - 0.03
         nxt = groups[g + 1][0] if g + 1 < len(groups) else None
