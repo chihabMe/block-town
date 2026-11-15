@@ -245,6 +245,7 @@ def _curl(head, m, rng):
 
 def _hatcap(head, m_cap, rng, hair_m):
     blob((0.68, 0.68, 0.44), (0, 0.04, 0.38), m_cap, head)
+    disc(0.69, 0.26, (0, 0.02, 0.34), m_cap, head, rot=(0, 0, 0), bv=0.05, verts=48)   # band: hides the jagged seam
     rbox((1.1, 0.72, 0.08), (0, -0.74, 0.32), m_cap, head, rot=(-8, 0, 0), bv=0.03)
     blob((0.64, 0.42, 0.42), (0, 0.24, 0.06), hair_m, head)
 

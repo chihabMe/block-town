@@ -147,7 +147,7 @@ def _load(path, coll_name):
     return coll, list(coll.all_objects), json.loads(path.with_suffix(".json").read_text())
 
 
-def place(name, **kw):
+def place(name, /, **kw):
     """Put a place from the library into this episode and return it (a Place). Arguments named in the place's GEO
     change its shape; the rest (sign words, a crowd) are applied fresh every episode."""
     if T._LOOK is None:

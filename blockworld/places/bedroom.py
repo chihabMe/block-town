@@ -6,7 +6,15 @@ Marks: seat (sitting up in bed: stand(c, p.spot("seat"), 0, face, T, legL=90, le
        floor (standing beside the bed).
 Cams:  front (the whole room), bed_close (a close-up of the bed), door (from the doorway, low).
 Dict keys kept for older episodes: root, seat, tuck(k), stand, lamp (the lamp's material: T.emission(p["lamp"], k)).
+
+Lying in bed under a duvet (ep07):
+    d = bedroom.duvet(p, "#E8A33C")                  make it once (hidden until shown)
+    bedroom.lie(c, p, "scared", T)                   in a shot: on the back, head on the pillow, facing the foot
+    bedroom.tuck_up(d, k, T)                         show it: k 0 = at the chest, 1 = up to the nose; it shivers
+Film it from the foot of the bed: shot((x - 3.0, y - 1.6, 9.8), (x - 4.4, y + 5.2, 4.0), 40).
 """
+import math
+
 import town as T
 from roblox import blob, plastic, rbox
 
@@ -51,6 +59,40 @@ def build(x=0, y=-460, wall="#5C6B94", blanket="#E8A33C"):
                      "bed_close": ((x - 1.5, y - 2.5, 4.6), (x - 4.5, y + 4.6, 4.5), 38),
                      "door": ((x + 8.5, y - 7, 3.2), (x - 3, y + 4, 3.5), 45)},
             "lamp_key": repr(("bedlamp", x, y))}
+
+
+def duvet(p, colour="#E8A33C"):
+    """A soft duvet with a turned-down sheet for someone lying in this room's bed. It hides the old pull-up slab and
+    starts hidden every frame; tuck_up() shows it. Its pivot is at the foot of the bed."""
+    import anim
+    rx, ry = p["seat"][0], p["seat"][1] - 4.6
+    piv = T.empty("duvet", (rx, ry - 2.5, 2.45))
+    m, sheet = plastic(colour, 0.75), plastic("#F4F4F2", 0.6)
+    rbox((6.8, 8.2, 1.7), (0, 4.1, 1.05), m, piv, bv=0.7)                              # over the body
+    for sx in (-1, 1):
+        rbox((0.6, 8.2, 1.6), (sx * 3.3, 4.1, 0.25), m, piv, bv=0.3)                  # drapes over the sides
+    rbox((6.9, 1.2, 1.1), (0, 7.6, 1.45), sheet, piv, bv=0.5)                        # the sheet at the neck
+    flap = p.one("bt_flap")
+
+    def hide(Tm, piv=piv, flap=flap):
+        piv.scale = (0.001, 0.001, 0.001)
+        flap.scale = (0.001, 0.001, 0.001)
+    hide(0)
+    anim.before_each_frame(hide)
+    return piv
+
+
+def lie(c, p, face, T_, dy=0.0, ph=0.0):
+    """Lie on the back in this room's bed, head on the pillow, looking toward the foot of the bed (the camera)."""
+    from anim import osc, pose
+    rx, ry = p["seat"][0], p["seat"][1] - 4.6
+    pose(c, (rx, ry + 1.5 + dy, 2.75), 0, face, head=(osc(T_, 4, 6, ph), -34), armL=(0, 4), armR=(0, -4))
+    c["root"].rotation_euler = (math.radians(-75), 0, 0)                 # propped on the pillow
+
+
+def tuck_up(d, k, T_, shiver=1.0):
+    """Show a duvet pulled up: k = 0 at the chest, 1 up to the nose; it shivers a little (scared)."""
+    d.scale = (1, 0.7 + 0.3 * k, 1 + 0.035 * shiver * math.sin(T_ * 31))
 
 
 def dress(p):

@@ -22,6 +22,7 @@ import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js"
 import { BokehPass } from "three/addons/postprocessing/BokehPass.js";
 import { ShaderPass } from "three/addons/postprocessing/ShaderPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
+import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 
 // World v2 look (on by default): contact shading, glow, depth of field, distance haze, a studio-light reflection and
 // a colour grade. scene.html?post=0 draws the plain v1 picture; ?ao=0 &bloom=0 &dof=0 &fog=0 &grade=0 switch one off.
@@ -34,7 +35,9 @@ const W = 1080, H = 1920;
 // ?s=0.5 draws a smaller frame (the draft: 540x960). The picture is the same, only fewer pixels.
 const S = Math.min(1, Math.max(0.25, Number(Q.get("s") || 1)));
 const RW = Math.round(W * S), RH = Math.round(H * S);      // the drawn size: the canvas and every pass buffer
-const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+// ?aa=0 drops the canvas's own multisampling (the passes already smooth the picture); ?keep=0 drops
+// preserveDrawingBuffer (fine when the frame is read right after drawing, as capture.mjs does).
+const renderer = new THREE.WebGLRenderer({ antialias: Q.get("aa") !== "0", preserveDrawingBuffer: Q.get("keep") !== "0" });
 renderer.setPixelRatio(1);
 renderer.setSize(RW, RH);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -237,6 +240,39 @@ function place(hid, arr, off, v) {
 }
 for (const [hid, s] of Object.entries(A.static)) place(hid, s.m, 0, s.v);
 
+// Speed: everything that never moves is merged into one mesh per material (and shadow setting), so the GPU gets a few
+// hundred draw calls instead of thousands. Decals (they shade in object space) and see-through parts stay separate.
+// ?merge=0 turns it off (to compare).
+let merged = 0, mergedFrom = 0;
+if (Q.get("merge") !== "0") {
+  const moving = new Set(A.dynamic.map((d) => String(d.hid)));
+  scene.updateMatrixWorld(true);
+  const groups = new Map();
+  for (const [hid, o] of Object.entries(nodes)) {
+    if (moving.has(String(hid)) || !o.visible || (info[hid] && info[hid].overlay)) continue;
+    for (const mesh of meshesOf[hid]) {
+      const m = mesh.material, d = M.materials[m.name];
+      if (!d || d.kind === "decal" || m.transparent || !mesh.visible) continue;
+      const g = mesh.geometry;
+      const sig = [m.name, mesh.castShadow, g.index ? 1 : 0, Object.keys(g.attributes).sort().join(",")].join("|");
+      if (!groups.has(sig)) groups.set(sig, []);
+      groups.get(sig).push(mesh);
+    }
+  }
+  for (const list of groups.values()) {
+    if (list.length < 2) continue;
+    const g = mergeGeometries(list.map((mesh) => mesh.geometry.clone().applyMatrix4(mesh.matrixWorld)), false);
+    if (!g) continue;
+    const one = new THREE.Mesh(g, list[0].material);
+    one.castShadow = list[0].castShadow;
+    one.receiveShadow = true;
+    one.matrixAutoUpdate = false;
+    scene.add(one);
+    for (const mesh of list) mesh.visible = false;
+    merged++; mergedFrom += list.length;
+  }
+}
+
 // ---------------------------------------------------------------- the v2 picture: passes after the plain render
 const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(RW, RH, { type: THREE.HalfFloatType, samples: 4 }));
 composer.setPixelRatio(1);
@@ -269,9 +305,10 @@ const bloom = new UnrealBloomPass(new THREE.Vector2(RW, RH), 0.22, 0.45, 1.55); 
 bloom.enabled = on("bloom");
 composer.addPass(bloom);
 const grade = new ShaderPass({
-  uniforms: { tDiffuse: { value: null }, sat: { value: 1.04 }, con: { value: 1.07 }, vig: { value: 0.16 } },
+  uniforms: { tDiffuse: { value: null }, sat: { value: 1.04 }, con: { value: 1.07 }, vig: { value: 0.16 },
+              tint: { value: new THREE.Vector3(1, 1, 1) }, sepia: { value: 0 }, flash: { value: 0 } },
   vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
-  fragmentShader: `uniform sampler2D tDiffuse; uniform float sat, con, vig; varying vec2 vUv;
+  fragmentShader: `uniform sampler2D tDiffuse; uniform float sat, con, vig, sepia, flash; uniform vec3 tint; varying vec2 vUv;
     void main(){ vec4 c = texture2D(tDiffuse, vUv); vec3 x = max(c.rgb, 0.0);
       vec3 hi = 0.8 + 0.2 * (1.0 - exp(-(x - 0.8) / 0.2));              // highlights roll off, they do not clip
       x = mix(x, hi, step(0.8, x));
@@ -280,19 +317,138 @@ const grade = new ShaderPass({
       x = 0.18 * pow(x / 0.18, vec3(con));                              // a little more contrast around mid grey
       vec2 q = (vUv - 0.5) * vec2(1.0, 0.8);
       x *= 1.0 - vig * smoothstep(0.28, 0.72, length(q));               // darker corners pull the eye to the middle
+      x *= tint;                                                        // the mood's colour (fx.py moods)
+      float g = dot(x, vec3(0.2126, 0.7152, 0.0722));
+      x = mix(x, g * vec3(1.08, 0.98, 0.82), sepia);                    // flashback: black and white, warm
+      x = mix(x, vec3(1.0), flash);                                     // a white flash
       gl_FragColor = vec4(x, c.a); }`,
 });
 grade.enabled = on("grade");
 composer.addPass(grade);
 composer.addPass(new OutputPass());
 
+// ---------------------------------------------------------------- effects (blockworld/fx.py): blocky particles
+// Every frame's effects come from anim.json "fx". Particles are deterministic (a hash of the seed and index), so any
+// frame can be drawn on its own. Glowing ones use colours above 1 so the bloom pass makes them shine.
+const FX = A.fx || null;
+const fxRand = (seed, i, k) => { const x = Math.sin(seed * 12.9898 + i * 78.233 + k * 37.719) * 43758.5453; return x - Math.floor(x); };
+function pool(geo, mat, n, shadow = false) {
+  const m = new THREE.InstancedMesh(geo, mat, n);
+  m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  m.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(n * 3), 3);
+  m.count = 0; m.frustumCulled = false; m.castShadow = shadow;
+  scene.add(m);
+  return m;
+}
+const FXP = FX ? {
+  glow: pool(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({ toneMapped: false }), 1200),
+  lit: pool(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ roughness: 0.6, side: THREE.DoubleSide }), 1200, true),
+  smoke: pool(new THREE.IcosahedronGeometry(1, 1), new THREE.MeshStandardMaterial({ roughness: 0.9, flatShading: true }), 400),
+  ring: pool(new THREE.TorusGeometry(1, 0.08, 8, 48), new THREE.MeshBasicMaterial({ toneMapped: false }), 16),
+  beam: pool(new THREE.ConeGeometry(1, 1, 32, 1, true), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.08,
+        blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, toneMapped: false }), 8),
+} : null;
+const _m4 = new THREE.Matrix4(), _q = new THREE.Quaternion(), _e = new THREE.Euler(), _v = new THREE.Vector3(), _s = new THREE.Vector3();
+function put(p, x, y, z, sx, sy, sz, rx, ry, rz, r, g, b) {
+  if (p.count >= p.instanceMatrix.count) return;
+  _q.setFromEuler(_e.set(rx, ry, rz));
+  _m4.compose(_v.set(x, y, z), _q, _s.set(sx, sy, sz));
+  p.setMatrixAt(p.count, _m4); p.instanceColor.setXYZ(p.count, r, g, b); p.count++;
+}
+const CONF = [[1, 0.25, 0.35], [1, 0.8, 0.15], [0.2, 0.75, 1], [0.35, 0.9, 0.35], [0.85, 0.35, 1], [1, 0.55, 0.15]];
+function applyFx(i) {
+  if (!FXP) return null;
+  for (const p of Object.values(FXP)) p.count = 0;
+  const f = FX[i];
+  if (!f) { for (const p of Object.values(FXP)) { p.instanceMatrix.needsUpdate = true; } return null; }
+  for (const it of f.items || []) {
+    const [ax, ay, az] = it.at, t = it.t, sd = it.seed || 7;
+    if (it.k === "sparks") {
+      for (let j = 0; j < it.n; j++) {
+        const life = it.life * (0.6 + 0.4 * fxRand(sd, j, 1));
+        if (t > life) continue;
+        const th = fxRand(sd, j, 2) * 6.283, up = 0.2 + 0.8 * fxRand(sd, j, 3), sp = 6 + 7 * fxRand(sd, j, 4);
+        const vx = Math.cos(th) * Math.sqrt(1 - up * up) * sp, vy = Math.sin(th) * Math.sqrt(1 - up * up) * sp, vz = up * sp;
+        const k = 1 - t / life, sz = 0.16 * k + 0.04;
+        put(FXP.glow, ax + vx * t, ay + vy * t, az + vz * t - 9 * t * t, sz, sz, sz * 2.5, th, up, 0, it.c[0], it.c[1], it.c[2]);
+      }
+    } else if (it.k === "confetti" || it.k === "money") {
+      const money = it.k === "money";
+      for (let j = 0; j < it.n; j++) {
+        const fall = (money ? 2.6 : 3.2) + 1.6 * fxRand(sd, j, 1);
+        let z = az + it.h - ((fall * t + it.h * fxRand(sd, j, 2)) % it.h);
+        const landed = z < az + 0.25;
+        if (landed) z = az + 0.06;                                    // lying flat on the ground, not sinking in
+        const x = ax + (fxRand(sd, j, 3) - 0.5) * it.w + 0.6 * Math.sin(t * 2 + j);
+        const y = ay + (fxRand(sd, j, 4) - 0.5) * it.w * 0.6;
+        const spin = t * (3 + 4 * fxRand(sd, j, 5));
+        const c = money ? [0.25, 0.7, 0.3] : (it.cols ? it.cols[j % it.cols.length] : CONF[j % CONF.length]);
+        const rx = landed ? Math.PI / 2 : spin, ry = landed ? 0 : spin * 0.6;
+        if (money) put(FXP.lit, x, y, z, 0.9, 0.04, 0.45, rx, ry, j, c[0], c[1], c[2]);
+        else put(FXP.lit, x, y, z, 0.32, 0.04, 0.22, rx, ry, j, c[0], c[1], c[2]);
+      }
+    } else if (it.k === "poof") {
+      const u = t / it.life;
+      for (let j = 0; j < 16; j++) {
+        const th = fxRand(sd, j, 1) * 6.283, el = (fxRand(sd, j, 2) - 0.3) * 1.4;
+        const d = it.s * (0.25 + 1.1 * Math.sqrt(u)) * (0.6 + 0.4 * fxRand(sd, j, 3));
+        const sz = it.s * 0.42 * (0.7 + 0.5 * fxRand(sd, j, 4)) * Math.pow(Math.max(0, 1 - u), 0.6) * (0.5 + u);
+        const g = 0.82 + 0.15 * fxRand(sd, j, 5);
+        put(FXP.smoke, ax + Math.cos(th) * d, ay + Math.sin(th) * d, az + it.s * 0.6 + Math.sin(el) * d * 0.7 + u * it.s * 0.5,
+            sz, sz, sz, th, el, 0, g, g, g * 1.02);
+      }
+    } else if (it.k === "fire") {
+      for (let j = 0; j < it.n; j++) {
+        const life = 0.55 + 0.35 * fxRand(sd, j, 1);
+        const u = ((t / life) + fxRand(sd, j, 2)) % 1;
+        const r = it.s * 0.45 * (1 - u) * (0.4 + 0.6 * fxRand(sd, j, 3)), th = fxRand(sd, j, 4) * 6.283 + u * 2;
+        const sz = it.s * 0.34 * (1 - u * 0.85) * (0.6 + 0.6 * fxRand(sd, j, 5));
+        const hot = 1 - u;                                           // yellow at the base, red at the tips
+        put(FXP.glow, ax + Math.cos(th) * r, ay + Math.sin(th) * r, az + u * it.s * 1.8, sz, sz, sz,
+            u * 3, j, 0, 5.0, 1.4 + 2.6 * hot, 0.25 * hot);
+      }
+    } else if (it.k === "ring") {
+      const pul = 1 + 0.06 * Math.sin(t * 6);
+      put(FXP.ring, ax, ay, az + 0.06, it.r * pul, it.r * pul, it.r * 0.6, 0, 0, t * 0.8, it.c[0], it.c[1], it.c[2]);
+      put(FXP.ring, ax, ay, az + 0.06, it.r * 0.7 * pul, it.r * 0.7 * pul, it.r * 0.4, 0, 0, -t, it.c[0], it.c[1], it.c[2]);
+      for (let j = 0; j < 22; j++) {                                  // sparkles rising round the ring
+        const u = ((t * 0.7) + j / 22) % 1, th = j / 22 * 6.283 + t * 1.3, sz = 0.16 * (1 - u);
+        put(FXP.glow, ax + Math.cos(th) * it.r, ay + Math.sin(th) * it.r, az + 0.2 + u * 3.2, sz, sz, sz, t, j, 0,
+            it.c[0], it.c[1], it.c[2]);
+      }
+    } else if (it.k === "beam") {
+      const a = it.a * (0.92 + 0.08 * Math.sin(t * 9));
+      // the cone's tip at the lamp, opening downward
+      put(FXP.beam, ax, ay, az - it.l / 2, it.r, it.l, it.r, Math.PI / 2, 0, 0, it.c[0] * a * 0.6, it.c[1] * a * 0.6, it.c[2] * a * 0.6);
+      put(FXP.beam, ax, ay, az - it.l / 2, it.r * 0.55, it.l, it.r * 0.55, Math.PI / 2, 0, 0, it.c[0] * a, it.c[1] * a, it.c[2] * a);
+      put(FXP.glow, ax, ay, az + 0.6, it.r * 0.4, it.r * 0.4, 1.2, 0, 0, 0, 0.15, 0.15, 0.18);   // the lamp housing
+      put(FXP.glow, ax, ay, az, it.r * 0.32, it.r * 0.32, 0.2, 0, 0, 0, 6, 5.6, 4.6);              // its bright face
+    }
+  }
+  for (const p of Object.values(FXP)) { p.instanceMatrix.needsUpdate = true; if (p.instanceColor) p.instanceColor.needsUpdate = true; }
+  return f.grade || null;
+}
+function applyGrade(g) {
+  const u = grade.uniforms;
+  u.sat.value = g && g.sat !== undefined ? g.sat : 1.04;
+  u.con.value = g && g.con !== undefined ? g.con : 1.07;
+  u.vig.value = g && g.vig !== undefined ? g.vig : 0.16;
+  u.tint.value.set(...(g && g.tint ? g.tint : [1, 1, 1]));
+  u.sepia.value = g && g.sepia ? g.sepia : 0;
+  u.flash.value = g && g.flash ? g.flash : 0;
+}
+
 const fwd = new THREE.Vector3(), tmp = new THREE.Matrix4(), focus = new THREE.Vector3();
+renderer.info.autoReset = false;
+window.__prof = { place: 0, main: 0, overlay: 0, finish: 0, n: 0 };
 window.renderAt = (i) => {
   const t0 = performance.now();
   A.dynamic.forEach((d, k) => {
     place(d.hid, BIN, (k * N + i) * 16, d.v[i]);
     if (d.s) meshesOf[d.hid].forEach((mesh, j) => { const mm = MATS[d.s[i][j]]; if (mm) mesh.material = mm; });
   });
+  const tP = performance.now();
+  applyGrade(applyFx(i));                                           // effects + colour grade (fx.py)
   for (const [name, vals] of Object.entries(A.emit)) if (MATS[name]) MATS[name].emissiveIntensity = vals[i];
   setSky(A.sky[i]);
   const c = A.cam[i];
@@ -317,6 +473,8 @@ window.renderAt = (i) => {
   key.intensity = k.e / (4 * Math.PI);
   key.color.setRGB(k.c[0], k.c[1], k.c[2], THREE.LinearSRGBColorSpace);
   for (const l of lamps) l.intensity = A.lamp[i] / (4 * Math.PI);      // Blender watts -> rough candela
+  const tS = performance.now();
+  renderer.info.reset();
   renderer.clear();
   renderer.shadowMap.needsUpdate = true;
   camera.layers.set(0);
@@ -333,19 +491,225 @@ window.renderAt = (i) => {
     bloom.threshold = 1.5 + 1.3 * day;
     composer.render();
   } else renderer.render(scene, camera);
+  const tM = performance.now();
+  window.__calls = renderer.info.render.calls; window.__tris = renderer.info.render.triangles;
   renderer.clearDepth();
   camera.layers.set(OVERLAY);
   renderer.render(scene, camera);
+  const tO = performance.now();
   renderer.getContext().finish();
-  return performance.now() - t0;
+  const tF = performance.now();
+  const P = window.__prof; P.place += tP - t0 + (tS - tP); P.main += tM - tS; P.overlay += tO - tM; P.finish += tF - tO; P.n++;
+  return tF - t0;
 };
 
 setSky(A.sky[0]);
 await Promise.all(texWait);
+// Speed: compile every shader once now (in parallel where the driver allows), not one by one the first time each
+// material comes into view.
+{ const t = performance.now(); camera.layers.enableAll(); await renderer.compileAsync(scene, camera); camera.layers.set(0);
+  window.__compile_ms = Math.round(performance.now() - t); }
 const gl = renderer.getContext();
 const dbg = gl.getExtension("WEBGL_debug_renderer_info");
 window.__check = { gpu: dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : "?", nodes: Object.keys(nodes).length,
-                   missing, frames: N, f0: A.f0, dynamic: A.dynamic.length, overlay: M.objects.filter(o => o.overlay).length };
+                   missing, merged, mergedFrom, compile_ms: window.__compile_ms, frames: N, f0: A.f0, dynamic: A.dynamic.length, overlay: M.objects.filter(o => o.overlay).length };
+
+// ---------------------------------------------------------------- flat 2D overlays (blockworld/overlay.py)
+// Labels, icons over heads, "+1", comic words, time cards, the HUD and the end card, drawn sharp over the frame.
+// capture.mjs saves window.frameCanvas(i): the WebGL frame with that frame's overlays on top (or just the frame).
+const OV = A.ov || null;
+let ovCanvas = null, ovCtx = null;
+if (OV) {
+  const ff = new FontFace("InterOV", "url(fonts/InterVariable.ttf)", { weight: "100 900" });
+  await ff.load();
+  document.fonts.add(ff);
+  ovCanvas = document.createElement("canvas");
+  ovCanvas.width = RW; ovCanvas.height = RH;
+  ovCtx = ovCanvas.getContext("2d");
+}
+const INK = "#15161B";
+const fontPx = (px, wt = 900) => `${wt} ${px}px InterOV, sans-serif`;
+// House style (the user's pick, Nov 2026, after agy compared six families): "Roblox game UI". Tags, meters, the top
+// bar and time cards are white or coloured text with a dark outline, on a see-through dark slate plate like Roblox's
+// own HUD; pops are outlined game numbers; comic sound words stay the bold yellow comic style.
+const TAG_WT = 800, TAG_SP = 0.04, PLATE = "rgba(30,32,38,0.55)", PLATE_HUD = "rgba(30,32,38,0.62)";
+// text on the dark plate must be bright: a dark colour (e.g. "#C21F1F") is mixed toward white until it reads
+function bright(col) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(col || "");
+  if (!m) return col || "#FFFFFF";
+  let [r, g, b] = [0, 2, 4].map((i) => parseInt(m[1].slice(i, i + 2), 16));
+  const lum = () => (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+  for (let k = 0; k < 10 && lum() < 0.62; k++) { r += (255 - r) * 0.18; g += (255 - g) * 0.18; b += (255 - b) * 0.18; }
+  return `rgb(${r | 0},${g | 0},${b | 0})`;
+}
+function plate(ctx, cx, cy, w, h, fill = PLATE) {
+  ctx.beginPath(); ctx.roundRect(cx - w / 2, cy - h / 2, w, h, h * 0.28); ctx.fillStyle = fill; ctx.fill();
+}
+const backEase = (x) => { x = Math.min(1, Math.max(0, x)); const c = 1.9; return 1 + (c + 1) * (x - 1) ** 3 + c * (x - 1) ** 2; };
+function shade(ctx, on, H) {
+  ctx.shadowColor = on ? "rgba(0,0,0,0.38)" : "transparent";
+  ctx.shadowBlur = on ? H * 0.006 : 0; ctx.shadowOffsetY = on ? H * 0.003 : 0;
+}
+function words(ctx, text, x, y, px, fill, stroke = INK, sw = 0.17, wt = 900) {
+  ctx.font = fontPx(px, wt); ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.lineJoin = "round";
+  // canvas ignores lineWidth = 0 and keeps the last width (the pill border), so skip the stroke instead
+  if (sw > 0) { ctx.lineWidth = px * sw; ctx.strokeStyle = stroke; ctx.strokeText(text, x, y); }
+  ctx.fillStyle = fill; ctx.fillText(text, x, y);
+}
+function pill(ctx, cx, cy, w, h, fill, stroke = INK) {
+  ctx.beginPath(); ctx.roundRect(cx - w / 2, cy - h / 2, w, h, h / 2);
+  ctx.fillStyle = fill; ctx.fill(); ctx.lineWidth = h * 0.09; ctx.strokeStyle = stroke; ctx.stroke();
+}
+function person(ctx, cx, cy, s, col) {            // a tiny person glyph (for the friend counter)
+  ctx.fillStyle = col;
+  ctx.beginPath(); ctx.arc(cx, cy - s * 0.22, s * 0.2, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx, cy + s * 0.28, s * 0.34, s * 0.24, 0, Math.PI, 0); ctx.fill();
+}
+function drawIcon(ctx, it, x, y, s, H) {
+  const k = it.icon;
+  ctx.lineJoin = "round"; ctx.lineWidth = s * 0.07; ctx.strokeStyle = INK;
+  if (k === "crown") {
+    const w = s * 1.1, h = s * 0.75, b = y + h / 2;
+    ctx.beginPath(); ctx.moveTo(x - w / 2, b); ctx.lineTo(x - w / 2, y - h * 0.15); ctx.lineTo(x - w * 0.25, y + h * 0.12);
+    ctx.lineTo(x, y - h / 2); ctx.lineTo(x + w * 0.25, y + h * 0.12); ctx.lineTo(x + w / 2, y - h * 0.15); ctx.lineTo(x + w / 2, b);
+    ctx.closePath(); ctx.fillStyle = it.color || "#FFC92E"; ctx.fill(); ctx.stroke();
+    for (const [dx, dy] of [[-w / 2, -h * 0.15], [0, -h / 2], [w / 2, -h * 0.15]]) {
+      ctx.beginPath(); ctx.arc(x + dx, y + dy, s * 0.09, 0, Math.PI * 2); ctx.fillStyle = "#FF5A6E"; ctx.fill(); ctx.stroke();
+    }
+    ctx.fillStyle = "rgba(255,255,255,0.45)"; ctx.fillRect(x - w * 0.42, b - h * 0.32, w * 0.84, h * 0.1);
+  } else if (k === "heart") {
+    const w = s;
+    ctx.beginPath(); ctx.moveTo(x, y + w * 0.42);
+    ctx.bezierCurveTo(x - w * 0.75, y - w * 0.05, x - w * 0.45, y - w * 0.62, x, y - w * 0.22);
+    ctx.bezierCurveTo(x + w * 0.45, y - w * 0.62, x + w * 0.75, y - w * 0.05, x, y + w * 0.42);
+    ctx.fillStyle = it.color || "#FF3B6B"; ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(x - w * 0.22, y - w * 0.18, w * 0.09, w * 0.05, -0.6, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(255,255,255,0.7)"; ctx.fill();
+  } else if (k === "question" || k === "exclaim") {
+    const r = s * 0.48;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.moveTo(x - r * 0.35, y + r * 0.85); ctx.lineTo(x - r * 0.65, y + r * 1.35); ctx.lineTo(x + r * 0.05, y + r * 0.95);
+    ctx.fillStyle = "#FFFFFF"; ctx.fill(); ctx.stroke();
+    words(ctx, k === "question" ? "?" : "!", x, y + r * 0.04, r * 1.4, it.color || (k === "question" ? "#3B82F6" : "#EF3B3B"), INK, 0.0);
+  } else if (k === "coin") {
+    const r = s * 0.46;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fillStyle = "#F5B82E"; ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.arc(x, y, r * 0.72, 0, Math.PI * 2); ctx.strokeStyle = "#C98A12"; ctx.lineWidth = s * 0.05; ctx.stroke();
+    words(ctx, "$", x, y + r * 0.03, r * 1.1, "#FFF3C4", "#B37400", 0.12);
+  } else if (k === "star") {
+    const R = s * 0.55, r = R * 0.45;
+    ctx.beginPath();
+    for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, q = i % 2 ? r : R; ctx.lineTo(x + q * Math.cos(a), y + q * Math.sin(a)); }
+    ctx.closePath(); ctx.fillStyle = it.color || "#FFD23A"; ctx.fill(); ctx.stroke();
+  } else if (k === "zzz") {
+    words(ctx, "Z", x - s * 0.25, y + s * 0.2, s * 0.6, "#BFE3FF", INK, 0.14);
+    words(ctx, "z", x + s * 0.12, y - s * 0.1, s * 0.48, "#BFE3FF", INK, 0.14);
+    words(ctx, "z", x + s * 0.38, y - s * 0.38, s * 0.36, "#BFE3FF", INK, 0.14);
+  } else if (k === "counter") {
+    const px = s * 0.5, txt = String(it.text ?? "0");
+    ctx.font = fontPx(px);
+    const w = ctx.measureText(txt).width + px * 2.4, h = px * 1.6;
+    pill(ctx, x, y, w, h, it.color || "#2FBF71");
+    person(ctx, x - w / 2 + h * 0.55, y, h * 0.62, "#FFFFFF");
+    words(ctx, txt, x + h * 0.28, y + px * 0.04, px, "#FFFFFF", INK, 0.0);
+  }
+}
+// keep it in the safe area: TikTok's own buttons cover the right edge and the top bar
+const inside = (x, half, W) => Math.min(Math.max(x, half + 0.07 * W), W - half - 0.12 * W);
+function drawOverlays(ctx, items, W, H) {
+  for (const it of items) {
+    const [sx, sy] = it.screen || [0.5, 0.5];
+    let x = sx * W;
+    const y = sy * H;
+    ctx.save();
+    if (it.kind === "label") {
+      const px = it.size * H, h = px * 1.5;                       // color = the text colour (white names, coloured meters)
+      ctx.font = fontPx(px, TAG_WT); ctx.letterSpacing = `${px * TAG_SP}px`;
+      const w = ctx.measureText(it.text).width + px * 1.0;
+      x = inside(x, w / 2, W);
+      ctx.translate(x, y - h / 2); ctx.scale(it.k, it.k);
+      plate(ctx, 0, 0, w, h);
+      words(ctx, it.text, 0, px * 0.04, px, bright(it.color), INK, 0.13, TAG_WT);
+      ctx.letterSpacing = "0px";
+    } else if (it.kind === "icon") {
+      const s = it.size * H;
+      x = inside(x, s * (it.icon === "counter" ? 1.4 : 0.6), W);
+      ctx.translate(x, y - s * 0.55); ctx.scale(it.k, it.k);
+      shade(ctx, true, H); drawIcon(ctx, it, 0, 0, s, H); shade(ctx, false, H);
+    } else if (it.kind === "pop") {
+      const u = it.u, px = it.size * H;
+      ctx.globalAlpha = 1 - u * u;
+      x = inside(x, px, W);
+      ctx.translate(x, y - u * 0.09 * H); ctx.scale(0.6 + 0.4 * backEase(u * 4), 0.6 + 0.4 * backEase(u * 4));
+      words(ctx, it.text, 0, 0, px, it.color, INK, 0.16, 850);
+    } else if (it.kind === "comic") {
+      const px = it.size * H, k = backEase(it.t / 0.22);
+      const wob = 4 * Math.sin(it.t * 38) * Math.exp(-it.t * 3.5);
+      ctx.globalAlpha = it.alpha;
+      ctx.font = fontPx(px);
+      x = inside(x, ctx.measureText(it.text).width / 2 + px * 0.2, W);
+      ctx.translate(x, y); ctx.rotate((it.angle + wob) * Math.PI / 180); ctx.scale(k, k);
+      ctx.font = fontPx(px); ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.lineJoin = "round";
+      ctx.fillStyle = INK; ctx.fillText(it.text, px * 0.06, px * 0.08);                  // a solid drop shadow
+      words(ctx, it.text, 0, 0, px, it.color, INK, 0.2);
+    } else if (it.kind === "timecard") {
+      const u = it.u, inn = Math.min(1, u * it.dur / 0.25), out = Math.min(1, (1 - u) * it.dur / 0.25);
+      const slide = inn < 1 ? (1 - backEase(inn)) * W : (out < 1 ? -(1 - out) * W : 0);   // in from the right, out to the left
+      const px = 0.075 * H, band = px * (it.sub ? 2.6 : 1.9), cy = (it.y ?? 0.2) * H;   // upper third: clear of faces
+      ctx.globalAlpha = Math.min(inn * 1.5, out * 1.5, 1);
+      ctx.translate(slide, 0);                                    // no band: big outlined text, like a game's area title
+      shade(ctx, true, H);
+      words(ctx, it.text, W / 2, cy - (it.sub ? px * 0.35 : 0), px, it.color, INK, 0.16, 850);
+      if (it.sub) words(ctx, it.sub, W / 2, cy + px * 0.75, px * 0.42, "#FFD84A", INK, 0.16, 850);
+      shade(ctx, false, H);
+    } else if (it.kind === "hud") {
+      const px = 0.026 * H, h = px * 1.8, y0 = 0.175 * H;                      // below TikTok's top bar and tabs
+      ctx.font = fontPx(px, TAG_WT);
+      if (it.left) {
+        const w = ctx.measureText(it.left).width + px * 2.6, cx = 0.07 * W + w / 2;
+        plate(ctx, cx, y0, w, h, it.warn ? "rgba(214,40,40,0.85)" : PLATE_HUD);
+        ctx.beginPath(); ctx.arc(cx - w / 2 + h * 0.55, y0, h * 0.26, 0, Math.PI * 2);
+        ctx.strokeStyle = "#FFFFFF"; ctx.lineWidth = h * 0.07; ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(cx - w / 2 + h * 0.55, y0); ctx.lineTo(cx - w / 2 + h * 0.55, y0 - h * 0.17);
+        ctx.moveTo(cx - w / 2 + h * 0.55, y0); ctx.lineTo(cx - w / 2 + h * 0.67, y0); ctx.stroke();
+        words(ctx, it.left, cx + h * 0.28, y0 + px * 0.04, px, "#FFFFFF", INK, 0.0, TAG_WT);
+      }
+      if (it.right) {
+        const w = ctx.measureText(it.right).width + px * 1.6, cx = 0.88 * W - w / 2;
+        plate(ctx, cx, y0, w, h, PLATE_HUD);
+        words(ctx, it.right, cx, y0 + px * 0.04, px, "#FFD84A", INK, 0.0, TAG_WT);
+      }
+    } else if (it.kind === "endcard") {
+      const t = it.t, px = 0.095 * H, cy = (-0.15 + ((it.ty ?? 0.17) + 0.15) * backEase(t / 0.4)) * H;   // title
+      ctx.fillStyle = `rgba(0,0,0,${Math.min(0.35, t * 0.9)})`; ctx.fillRect(0, 0, W, H);
+      ctx.save(); ctx.translate(W / 2, cy); ctx.rotate(-4 * Math.PI / 180);
+      ctx.font = fontPx(px); ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillStyle = INK; ctx.fillText(it.text, px * 0.06, px * 0.08);
+      words(ctx, it.text, 0, 0, px, "#FFE14A", INK, 0.2); ctx.restore();          // the yellow comic look
+      const bp = 0.05 * H, bh = bp * 1.7, by = (it.by ?? 0.6) * H;               // buttons low: clear of faces
+      for (const [j, txt, col] of [[0, it.a, "#2FBF71"], [1, it.b, "#EF3B3B"]]) {
+        const k = backEase((t - 0.45 - 0.15 * j) / 0.25);
+        if (k <= 0.01) continue;
+        ctx.save(); ctx.translate(0.475 * W + (j ? 1 : -1) * 0.2 * W, by); ctx.scale(k, k);
+        ctx.font = fontPx(bp);
+        const bw = Math.max(ctx.measureText(txt).width + bp * 1.6, 0.3 * W);
+        shade(ctx, true, H); pill(ctx, 0, 0, bw, bh, col); shade(ctx, false, H);
+        words(ctx, txt, 0, bp * 0.05, bp, "#FFFFFF", INK, 0.14);
+        ctx.restore();
+        if (j === 0 && t > 0.6) words(ctx, "or", 0.475 * W, by, bp * 0.6, "#FFFFFF", INK, 0.2);
+      }
+    }
+    ctx.restore();
+  }
+}
+window.frameCanvas = (i) => {
+  const glc = renderer.domElement;
+  if (!OV || !OV[i] || !OV[i].length || Q.get("ov") === "0") return glc;   // ?ov=0: the picture without overlays
+  ovCtx.globalAlpha = 1; ovCtx.drawImage(glc, 0, 0);
+  drawOverlays(ovCtx, OV[i], RW, RH);
+  return ovCanvas;
+};
+
 window.__ready = true;
 </script>
 </body>

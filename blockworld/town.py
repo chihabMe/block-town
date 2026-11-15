@@ -393,6 +393,7 @@ RX, LX = ROAD_W / 2 + 4.5, -(ROAD_W / 2 + 4.5)    # sidewalk centre lines (x = 1
 HOUSE_Y = tuple(range(-60, 170, 30))              # the house rows along the street
 WIN = mat("#F7CE6E", emit=1.0, key="window")
 LAMP_BULB = mat("#FFD08A", emit=1.0, key="bulb")
+LAMP_POST = "#6A7080"                            # street lamp posts (ep07: lighter so they read at night)
 DARK = mat("#22232B")
 SIGN_TEXT = ("#FFD84A", 2.5, "signtext")
 LAMPS = []
@@ -548,9 +549,11 @@ def tree(x, y, s=1.0, seed=0):
 def lamp(x, y):
     sx = -1 if x > 0 else 1                                   # arm points to the road
     r = empty("lamp", (x, y, WALK_H))
-    box((0.5, 0.5, 13.2), (0, 0, 6.6), mat("#15161B"), r)
-    box((4.2, 0.4, 0.4), (sx * 2.0, 0, 13.0), mat("#15161B"), r)
+    post = mat(LAMP_POST)                     # mid grey: a near-black post vanished at night and the bulb seemed to float
+    box((0.5, 0.5, 13.2), (0, 0, 6.6), post, r)
+    box((4.2, 0.4, 0.4), (sx * 2.0, 0, 13.0), post, r)
     box((2.0, 1.0, 0.5), (sx * 3.6, 0, 12.6), LAMP_BULB, r)
+    box((2.4, 1.3, 0.32), (sx * 3.6, 0, 12.98), post, r)                   # a shade over the bulb
     li = bpy.data.lights.new("lampL", "SPOT")
     li.color = lin("#FFBD6B")[:3]
     li.spot_size = math.radians(118)

@@ -157,6 +157,17 @@ def follow(c, t=0.0, back_=7.5, side=2.4, rise=1.0, fov=44, lead=4.0, key_w=0):
     shot(e - front_v * back_ * s + right * side * s + Vector((0, 0, rise * s)), e + front_v * lead * s, fov, key_w=key_w)
 
 
+def chase(c, t=0.0, dist=9.0, side=0.9, rise=0.4, fov=46, shake=0.05, key_w=0):
+    """The chase: the camera runs backwards in front of a running character, looking back at them (and whatever is
+    chasing them), with a little handheld shake. Use with sprint / run_pose / crowd_run."""
+    front_v, right = _dirs(c)
+    s = c["root"].scale[2]
+    e = eyes(c)
+    jig = Vector((math.sin(t * 17.0), 0, math.sin(t * 23.0 + 1.0))) * shake * s
+    shot(e + front_v * dist * s + right * side * s + Vector((0, 0, rise * s)) + jig, e - front_v * 2.0 * s, fov,
+         key_w=key_w)
+
+
 def two_shot(a, b, t=0.0, fov=40, dist=11.0, rise=0.2, push=0.5, key_w=0):
     """Two people side on: the camera stands at right angles to the line between them and backs off until both
     fit the narrow 9:16 frame (stand them 3-4 studs apart for big faces)."""

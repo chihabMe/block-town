@@ -359,10 +359,30 @@ def phone_on_ground(x, y, picture="lock", yaw=0, z=None):
 
 
 def flat_cap(c, colour="#4A4F5C"):
-    """A flat cap with a short peak (old men, watchmen)."""
+    """A flat cap with a short peak that covers the top of the head (old men, watchmen). Use with hair "bald" and
+    temples(c) so no hair pokes through the crown."""
     m = plastic(colour, 0.6)
-    disc(0.74, 0.34, (0, 0.04, 0.66), m, c["head"], rot=(0, 0, 0), bv=0.12, verts=32)
-    rbox((1.15, 0.62, 0.12), (0, -0.62, 0.55), m, c["head"], rot=(-8, 0, 0), bv=0.05)
+    disc(0.8, 0.38, (0, 0.04, 0.68), m, c["head"], rot=(0, 0, 0), bv=0.12, verts=32)
+    rbox((1.2, 0.66, 0.12), (0, -0.66, 0.56), m, c["head"], rot=(-8, 0, 0), bv=0.05)
+
+
+def temples(c, colour="#C9CDD4"):
+    """Short grey hair at the temples, under a cap (an old man)."""
+    for sx in (-1, 1):
+        blob((0.09, 0.3, 0.15), (sx * 0.64, 0.12, 0.3), plastic(colour, 0.55), c["head"])
+
+
+def skirt(c, colour="#8A4FB5"):
+    """A short skirt over the hips (a girl's outfit)."""
+    rbox((2.35, 1.3, 1.05), (0, 0, -0.32), plastic(colour, 0.5), c["body"], bv=0.3)
+
+
+def bow(c, colour="#FF4FA0"):
+    """A big hair bow on top of the head."""
+    m = plastic(colour, 0.35)
+    for sx in (-1, 1):
+        blob((0.32, 0.18, 0.24), (sx * 0.32, 0.05, 0.86), m, c["head"], rot=(0, sx * 20, 0))
+    blob((0.14, 0.14, 0.14), (0, 0.05, 0.86), m, c["head"])
 
 
 def moustache(c, colour="#D8DCE3"):
@@ -388,7 +408,9 @@ def nurse_cap(c):
 
 
 def lantern(c, side="R", colour="#FFC56B"):
-    """A lantern hanging from the hand, glowing. Keep the arm low (arm=(10, 0)) so it swings by the knee."""
+    """A lantern hanging from the hand, glowing. Keep the arm low (arm=(10, 0)) so it swings by the knee. Before a wave
+    or any raised arm, put it on the ground with set_down(lantern, (x, y, z)); every frame starts with it in the hand."""
+    import anim
     r = T.empty(c["name"] + ".lantern", (0, 0, -2.05), c["arm" + side])
     metal = plastic("#2A2C33", 0.35)
     rbox((0.12, 0.12, 0.5), (0, 0, -0.25), metal, r, bv=0.03)                        # handle
@@ -398,7 +420,20 @@ def lantern(c, side="R", colour="#FFC56B"):
         for sy in (-1, 1):
             rbox((0.1, 0.1, 0.9), (sx * 0.34, sy * 0.34, -1.05), metal, r, bv=0.02)
     rbox((0.86, 0.86, 0.14), (0, 0, -1.55), metal, r, bv=0.05)                        # base
+
+    def back_in_hand(Tm, r=r):
+        r.location, r.rotation_euler = (0, 0, -2.05), (0, 0, 0)
+    anim.before_each_frame(back_in_hand)
     return r
+
+
+def set_down(lantern_root, at):
+    """Stand a hand-held lantern upright on the ground at world point at (x, y, ground z). Call after posing the
+    character, every frame it should stay down (ep07: Max puts his lantern down to wave)."""
+    from mathutils import Matrix
+    bpy.context.view_layer.update()
+    s = lantern_root.matrix_world.to_scale()[0]
+    lantern_root.matrix_world = Matrix.Translation((at[0], at[1], at[2] + 1.62 * s)) @ Matrix.Scale(s, 4)
 
 
 _BUZZ = {}
@@ -450,25 +485,60 @@ def phone_bin(x, y, yaw=0, label="PHONES"):
 
 
 def ice_cream_truck(x, y, yaw=0, lit=True):
-    """An ice-cream van, nose toward -Y, serving hatch on its +X side, a big cone on the roof (glows at night)."""
+    """An ice-cream van (ep07): cab with headlights, grille and windows, a cream body with mint and pink bands, a glowing
+    serving window under a striped awning on its +X side, a menu board, string lights, a roof speaker and the giant
+    cone with a cherry. Nose toward -Y. r["speaker"] is the speaker's local point (music notes come out of it)."""
     r = T.empty("icecream", (x, y, T.ROAD), yaw=yaw)
-    white, pink, dark = plastic("#F6F3EE", 0.35), plastic("#FF8FBF", 0.35), plastic("#1A1C22", 0.4)
-    k = 1.0 if lit else 0.0
-    rbox((7.6, 17.0, 7.4), (0, 1.0, 4.6), white, r, bv=0.6)                            # box body
-    rbox((7.2, 5.0, 4.6), (0, -9.4, 3.2), white, r, bv=0.6)                            # cab
-    rbox((6.6, 0.3, 2.4), (0, -11.95, 4.2), glow("#BFE9FA", 0.5), r, bv=0.2)           # windscreen
-    rbox((7.7, 17.1, 1.0), (0, 1.0, 2.2), pink, r, bv=0.15)                            # pink stripe
-    rbox((0.3, 9.0, 3.4), (3.85, 1.5, 5.4), glow("#FFC98A", 0.7 * k + 0.1), r, bv=0.1)  # serving hatch, lit inside
-    rbox((0.9, 9.4, 0.3), (4.2, 1.5, 7.3), pink, r, bv=0.08)                           # awning
-    for sy in (-8.0, 6.5):
-        for sx in (-1, 1):
-            disc(1.3, 1.0, (sx * 3.7, sy, 1.3), dark, r, rot=(0, 90, 0), bv=0.2, verts=24)
-    cone(1.9, 5.0, (0, 1.0, 12.6), (0, 0, -1), glow("#E3A55A", 0.6 * k + 0.1), r, verts=16)  # cone, point down
-    blob((2.2, 2.2, 1.8), (0, 1.0, 13.6), glow("#FF9EC8", 1.8 * k + 0.2), r)           # strawberry scoop
-    blob((1.6, 1.6, 1.4), (0, 1.0, 15.7), glow("#FFF4E0", 1.8 * k + 0.2), r)           # vanilla scoop
+    k = 1.0 if lit else 0.25
+    cream, pink, mint = plastic("#FFF4E6", 0.35), plastic("#FF8FBF", 0.35), plastic("#7FD8C4", 0.35)
+    dark, chrome = plastic("#1A1C22", 0.4), plastic("#D5D8DE", 0.15)
+    glass = glow("#BFE9FA", 0.45)
+    rbox((7.0, 21.6, 1.0), (0, -1.2, 1.7), dark, r, bv=0.1)                             # chassis
+    rbox((7.6, 14.6, 7.6), (0, 2.6, 5.8), cream, r, bv=0.55)                            # the body
+    rbox((7.72, 14.7, 1.7), (0, 2.6, 2.9), mint, r, bv=0.3)                             # mint skirt
+    rbox((7.76, 14.74, 0.45), (0, 2.6, 3.95), pink, r, bv=0.1)                          # pink line
+    rbox((7.8, 14.8, 0.7), (0, 2.6, 9.75), pink, r, bv=0.3)                             # roof edge
+    rbox((7.2, 5.8, 5.2), (0, -7.6, 4.4), cream, r, bv=0.6)                             # cab
+    rbox((7.32, 5.9, 1.7), (0, -7.6, 2.9), mint, r, bv=0.3)
+    rbox((7.0, 2.6, 2.4), (0, -11.0, 3.2), cream, r, bv=0.6)                            # bonnet
+    rbox((6.4, 0.25, 2.3), (0, -10.35, 5.6), glass, r, rot=(-24, 0, 0), bv=0.15)       # windscreen
     for sx in (-1, 1):
-        T.text("ICE CREAM", 1.1, (sx * 3.83, 1.0, 3.3), plastic("#E0457B", 0.4, key="icink"), r,
-               rot=(90, 0, 90 * sx), extrude=0.03, max_w=8)
+        rbox((0.2, 3.0, 2.1), (sx * 3.62, -7.6, 5.4), glass, r, bv=0.1)                 # cab side windows
+        rbox((1.3, 0.25, 0.9), (sx * 2.5, -12.3, 3.4), glow("#FFF1C2", 1.6 * k), r, bv=0.1)   # headlights
+        rbox((0.9, 0.25, 0.7), (sx * 2.9, 9.92, 3.6), glow("#FF3B30", 1.0 * k), r, bv=0.1)    # tail lights
+        for wy in (-8.4, 6.2):                                                         # wheels and hubcaps
+            disc(1.45, 1.0, (sx * 3.65, wy, 1.45), dark, r, rot=(0, 90, 0), bv=0.25, verts=28)
+            disc(0.7, 0.2, (sx * 4.12, wy, 1.45), chrome, r, rot=(0, 90, 0), bv=0.05, verts=20)
+    rbox((3.2, 0.25, 1.3), (0, -12.32, 2.9), dark, r, bv=0.1)                          # grille
+    rbox((7.4, 0.6, 0.7), (0, -12.35, 1.9), chrome, r, bv=0.2)                         # bumpers
+    rbox((7.4, 0.6, 0.7), (0, 9.9, 1.9), chrome, r, bv=0.2)
+    rbox((0.06, 0.2, 5.6), (0, 9.95, 5.6), dark, r, bv=0)                              # back door line
+    rbox((0.25, 7.0, 3.4), (3.82, 3.4, 6.1), glow("#FFD7A0", 1.1 * k), r, bv=0.1)      # serving window, lit inside
+    rbox((1.3, 7.4, 0.3), (4.25, 3.4, 4.3), pink, r, bv=0.08)                          # counter
+    for i in range(7):                                                                 # striped scalloped awning
+        col = pink if i % 2 else cream
+        yy = 3.4 - 3.8 + 7.6 / 14 + i * 7.6 / 7
+        rbox((1.8, 7.6 / 7, 0.22), (4.55, yy, 8.35), col, r, rot=(0, -18, 0), bv=0.05)
+        blob((0.3, 7.6 / 14, 0.3), (5.38, yy, 8.05), col, r)
+    rbox((0.2, 2.6, 3.0), (3.86, -2.9, 6.2), plastic("#FFFFFF", 0.4), r, bv=0.1)        # menu board with 3 cones
+    for i, col in enumerate(("#FF8FBF", "#8B5A3C", "#7FD8C4")):
+        blob((0.1, 0.45, 0.45), (3.98, -3.75 + i * 0.85, 6.9), plastic(col, 0.4), r)
+        cone(0.32, 0.8, (3.98, -3.75 + i * 0.85, 6.4), (0, 0, -1), plastic("#E3A55A", 0.5), r, verts=8)
+    T.text("ICE CREAM", 1.5, (-3.86, 2.6, 6.6), plastic("#E0457B", 0.4, key="icink"), r, rot=(90, 0, -90),
+           extrude=0.03, max_w=11)
+    T.text("ICE CREAM", 0.75, (3.86, 3.4, 2.9), plastic("#FFFFFF", 0.4, key="icwhite"), r, rot=(90, 0, 90),
+           extrude=0.02, max_w=6.5)
+    cols = ("#FF5A8A", "#FFD23A", "#7FE3FF", "#3BE37E")                                 # roof string lights
+    for sx in (-1, 1):
+        for i in range(9):
+            blob((0.22, 0.22, 0.22), (sx * 3.95, -4.2 + i * 1.7, 9.4), glow(cols[i % 4], 1.4 * k), r)
+    rbox((1.4, 1.4, 0.8), (0, -2.0, 10.5), plastic("#D5D8DE", 0.3), r, bv=0.15)       # speaker
+    cone(1.0, 1.8, (0, -2.6, 11.1), (0, -1, 0.25), plastic("#C9CCD4", 0.3), r, verts=16)
+    cone(1.9, 5.0, (0, 4.0, 12.8), (0, 0, -1), glow("#E3A55A", 0.55 * k + 0.1), r, verts=16)   # the giant cone
+    blob((2.2, 2.2, 1.8), (0, 4.0, 13.8), glow("#FF9EC8", 1.6 * k + 0.2), r)
+    blob((1.6, 1.6, 1.4), (0, 4.0, 15.9), glow("#FFF4E0", 1.6 * k + 0.2), r)
+    blob((0.5, 0.5, 0.5), (0, 4.0, 17.5), glow("#FF3B30", 1.2 * k + 0.1), r)           # the cherry
+    r["speaker"] = (0.0, -2.6, 11.4)
     return r
 
 

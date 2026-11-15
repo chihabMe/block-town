@@ -16,8 +16,10 @@ import town as T
 EXTRAS = {
     "doctor": (("Doctor", "#C98A5A", "#F4F6F8", "#5FA8D3", "side", "dark"), dict(sleeves="long", seed=11), ("red_cross",),
                "white coat with a red cross (ep08)"),
-    "watchman": (("Watchman", "#E1B892", "#2F3F5E", "#2A2A33", "side", "grey"), dict(sleeves="long", seed=11),
-                 ("flat_cap", "moustache", "lantern"), "old night-watchman with a lantern (ep07)"),
+    "watchman": (("Watchman", "#E1B892", "#2F3F5E", "#2A2A33", "bald", "grey"), dict(sleeves="long", seed=11),
+                 ("flat_cap", "temples", "moustache", "lantern"), "old night-watchman with a lantern (ep07)"),
+    "lily": (("Lily", "#F0C8A0", "#FF7FB0", "#8A4FB5", "pig", "brown"), dict(scale=0.8, seed=31), ("skirt", "bow"),
+             "Max's little sister, 7: pink top, purple skirt, pigtails and a pink bow (ep07)"),
     "baker": (("Baker", "#C98A5A", "#F2EEE6", "#3A3A46", "bun", "brown"), dict(sleeves="long", seed=21), (),
               "baker in white (ep07)"),
     "postman": (("Postman", "#8A5A3C", "#3E7CC9", "#22304A", "cap", "#1F3A7A"), dict(seed=22), ("mail_bag",),

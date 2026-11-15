@@ -35,7 +35,7 @@ __all__ = [
     "size", "feet", "card", "put", "over", "eyes", "closeup", "stand", "walk", "walk_dir", "run", "math", "Vector",
     "wcut", "wpop", "before_each_frame", "focus",
     # action moves (ep09)
-    "sprint", "fall", "sit", "clap", "cheer", "gasp", "look_up", "drum", "juggle", "magic", "see_through", "dof",
+    "sprint", "mocap", "fall", "sit", "clap", "cheer", "gasp", "look_up", "drum", "juggle", "magic", "see_through", "dof",
 ]
 
 ARGS = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
@@ -247,6 +247,53 @@ def sprint(c, x, y0, way, T, face="scared", ph=0.0, speed=11.0, z=WALK, arms_up=
          armL=arms[0], armR=arms[1], legL=-62 * sw, legR=62 * sw, lean=-20, tilt=5 * sw)
 
 
+_CLIPS = {}
+
+
+def mocap(c, clip, start, yaw, t, face, speed=1.0, travel=True, loop=False):
+    """Play a motion-capture clip on character c: blockworld/mocap/<clip>.json, made from a free BVH file with
+    mocap_convert.py (e.g. "run_cmu09_02", "chicken_dance_cmu18_15"). start = (x, y, z) where the feet begin, yaw =
+    which way the clip's first frame faces (0 = -Y), t = seconds since the clip started (use the shot's t).
+    travel=False keeps it on the spot; loop=True repeats it (a run keeps going forward). Only shoulders, hips, neck and
+    waist move: elbows and knees don't exist on our characters, so hand-detail moves lose their detail."""
+    if clip not in _CLIPS:
+        _CLIPS[clip] = json.loads((Path(__file__).resolve().parent / "mocap" / f"{clip}.json").read_text())
+    d = _CLIPS[clip]
+    fr = d["frames"]
+    n = len(fr)
+    x = max(0.0, t) * d["fps"] * speed
+    laps = 0
+    if loop:
+        laps, x = divmod(x, n - 1)
+    else:
+        x = min(x, n - 1.0)
+    i = int(x)
+    a = x - i
+    A, B = fr[i], fr[min(i + 1, n - 1)]
+
+    def L(k):
+        return A[k] + (B[k] - A[k]) * a
+
+    def L2(k):
+        out = []
+        for u, v in zip(A[k], B[k]):
+            dv = (v - u + 180) % 360 - 180                     # the short way round (raised arms sit near 180)
+            out.append(u + dv * a)
+        return tuple(out)
+    s = c["root"].scale[2]
+    fwd, side = L("fwd"), L("side")
+    if loop:
+        fwd += laps * fr[-1]["fwd"]
+        side += laps * fr[-1]["side"]
+    if not travel:
+        fwd = side = 0.0
+    f = _fwd(yaw)
+    right = Vector((f.y, -f.x, 0.0))
+    p = Vector(start) + (f * fwd + right * side) * s + Vector((0, 0, L("up") * s))
+    pose(c, tuple(p), yaw + L("yaw"), face, armL=L2("armL"), armR=L2("armR"), legL=L("legL"), legR=L("legR"),
+         head=L2("head"), lean=L("lean"), tilt=L("tilt"))
+
+
 def fall(c, loc, yaw, face, k, T=0.0):
     """Trip and fall flat on the face: k = 0 standing, 1 lying on the ground (use smooth or back for k).
     Arms fly forward, one leg kicks up, a small bounce when he lands."""
@@ -280,7 +327,7 @@ def cheer(c, loc, yaw, face, T, ph=0.0, seated=False):
     """Both arms up and waving, a little jump (standing) or a bounce in the seat."""
     w = math.sin(2 * math.pi * 2.4 * T + ph)
     hop = abs(math.sin(2 * math.pi * 1.6 * T + ph)) * (0.25 if seated else 0.7) * c["root"].scale[2]
-    kw = dict(armL=(165, 28 + 12 * w), armR=(165, 28 - 12 * w), head=(0, 12))
+    kw = dict(armL=(165, -22 + 10 * w), armR=(165, -22 - 10 * w), head=(0, 12))   # raised: negative out = outward
     l = Vector(loc) + Vector((0, 0, hop))
     (sit if seated else stand)(c, tuple(l), yaw, face, T, ph, **kw)
 
@@ -583,3 +630,24 @@ def run(shots, end=None, tod="day"):
                 raise SystemExit(3)
     else:
         raise SystemExit(f"unknown mode {MODE!r}: use check, stills, frame, render or resume")
+
+
+# the movement pack (dances, jumps, panic, float, sink, tumble, crowds): blockworld/moves.py
+from moves import *  # noqa: E402,F401,F403
+import moves as _moves  # noqa: E402
+__all__ += _moves.__all__
+
+# flat 2D overlays (labels, icons over heads, +1, comic words, time cards, HUD, end card): blockworld/overlay.py
+from overlay import *  # noqa: E402,F401,F403
+import overlay as _overlay  # noqa: E402
+__all__ += _overlay.__all__
+
+# creatures (giant monster, penguin, frog, lion, swarms): blockworld/creatures.py
+from creatures import *  # noqa: E402,F401,F403
+import creatures as _creatures  # noqa: E402
+__all__ += _creatures.__all__
+
+# effects (sparks, confetti, money, poof, fire, rings, beams) and moods / grades: blockworld/fx.py
+from fx import *  # noqa: E402,F401,F403
+import fx as _fx  # noqa: E402
+__all__ += _fx.__all__

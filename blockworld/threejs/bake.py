@@ -28,7 +28,7 @@ REF = os.environ.get("BT_TJ_REF") == "1"
 _orig_render = town.render_still
 
 S = {"objs": None, "mats": [], "vis": [], "slots": [], "cam": [], "sun": [], "key": [], "sky": [], "emit": [],
-     "lamp": [], "times": []}
+     "lamp": [], "times": [], "ov": [], "fx": []}
 
 
 def col(sock):
@@ -228,6 +228,10 @@ def record():
                                            town.bg.inputs["Strength"].default_value)])
     S["emit"].append(emission_now())
     S["lamp"].append(round(town.LAMPS[0].energy, 2) if town.LAMPS else 0.0)
+    ov = sys.modules.get("overlay")                     # flat 2D graphics asked for this frame (blockworld/overlay.py)
+    S["ov"].append(ov.flush(bpy.context.scene, town.cam) if ov else [])
+    fx = sys.modules.get("fx")                          # effects and the colour grade (blockworld/fx.py)
+    S["fx"].append(fx.flush() if fx else None)
 
 
 def finish():
@@ -254,6 +258,10 @@ def finish():
            "dynamic": [{"hid": objs[i]["hid"], "v": [int(x) for x in V[:, i]],
                         "s": [list(S["slots"][f][i]) for f in range(n)] if swap[i] else None} for i in dyn],
            "cam": S["cam"], "sun": S["sun"], "key": S["key"], "sky": S["sky"], "emit": emit, "lamp": S["lamp"]}
+    if any(S["ov"]):
+        out["ov"] = S["ov"]
+    if any(S["fx"]):
+        out["fx"] = S["fx"]
     (OUT / "anim.json").write_text(json.dumps(out, separators=(",", ":")))
     print(f"TJ anim: {n} frames, {len(objs)} objects, {len(dyn)} dynamic, {len(emit)} glowing materials change, "
           f"bake per frame mean {np.mean(S['times'][1:]) * 1000:.1f} ms", flush=True)
