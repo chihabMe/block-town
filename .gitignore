@@ -29,3 +29,6 @@ blockworld/places/cache/
 # Local logs and visual comparisons
 *.log
 /compare/
+
+# local render tests (large; not part of the skill)
+/experiments/

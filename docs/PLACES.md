@@ -43,6 +43,7 @@ Outdoor places (`places/_outdoor.py`) each stand on their own plot, 1000 studs a
 | `park` | (1000, 0) | `sign`. `p["swing"](T)` and `p["seesaw"](T)` move the playground |
 | `school_front` | (2000, 0) | `name`, `clock`, `bus=True` |
 | `downtown` | (3000, 0) | `signs` (`{index: name}`), `screen` (a landscape picture). `p["lights"]("green")` sets the traffic lights |
+| `animal_shelter` | (4000, 0) | `sign`. `p["door_open"](k)` opens the door; `p["bell_press"](k)` presses the rescue bell |
 
 Pictures on the television, the classroom board and the downtown screen must be landscape. Phone pictures are portrait and will not fit those slots.
 
@@ -124,3 +125,10 @@ A new person who will appear again goes into `cast.py`, not into one episode fil
 Add `blockworld/places/<name>.py` with `GEO`, `build(**geo)` and `dress(p, **words)`. `build` returns `{"marks": {...}, "cams": {...}}`. Park an indoor place on the next free y (−1060, then −1160). Park an outdoor place on the next free plot (4000, then 5000), 1000 studs from its neighbour, or a wide camera will see both. Add a section to this file in the same change.
 
 Building is the normal path. `town.prim()` makes the street in about 2.5 seconds, which is faster than loading a saved copy. A place can set `CACHE = True`, or the episode can set `BT_PLACE_CACHE=1`, to save `places/cache/<name>-<hash>.blend`. The cache is not committed. Change the place's code, or a kit file it is built from, and the next run rebuilds it.
+
+### animal_shelter
+
+Outdoor plot at (4000, 0); a warm shelter with a hinged entrance, rescue bell, beds and kennel background.
+Episodes supply the animals. Marks: `door`, `bell`, `keeper`, `max_inside`, `zoe_inside`, `dog`, `puppy`.
+Cameras: `outside`, `door`, `inside`, `dogs`. `p["door_open"](k)` opens the door inward;
+`p["bell_press"](k)` presses the rescue bell. Both reset each frame. Added for ep18.

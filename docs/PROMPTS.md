@@ -46,8 +46,8 @@ one line. Add all of them to RULE_BANK.md with today's date.
 ```
 Write three scripts for idea {n}. Follow docs/SCRIPT.md: 60 seconds, about 240 words, one sentence a line,
 the 8 beats with "everyone obeys" (a list of three) and "punished first", a callback and a fair twist whose clue is
-hidden in beat 4. A, B and C must differ in twist, tone or underdog. Score each on the 12-point critic list, fix
-anything under 8, and write all three to EPISODE/SCRIPT.md (pattern: examples/ep05-wifi/SCRIPT.md) with a beat table
+hidden in beat 4. The first two lines are the hook: the rule said to "you", then a contrast line. A, B and C must
+differ in twist, tone or underdog. Score each on the 13-point critic list (13 is the hook check), fix anything under 8, and write all three to EPISODE/SCRIPT.md (pattern: examples/ep05-wifi/SCRIPT.md) with a beat table
 for each. Recommend one. Put my pick (or yours, if I say "go with yours") in EPISODE/script.txt and list what the
 pictures need: landmark, signs, props, tags, cast roles.
 ```
@@ -88,7 +88,9 @@ openings.py new (same words; different first image, landmark reveal, camera or f
 differs). For each: cut its episode.py down to the hook shots and change them, run check until still_check.txt is
 clean, render_threejs.sh VARIANT --draft, cues for the hook (Pixabay, or ElevenLabs only after telling me the
 credit cost), finish.py VARIANT --draft. Then openings.py grid. Look at frames from every variant before sending.
-Send me the grid and each draft, and say which you recommend and why.
+Score every variant on the picture half of the hook check in docs/SCRIPT.md (the rule's picture by 1 s, line 2's
+contrast shown on screen, the caption tells the hook with the sound off). Send me the grid and each draft, and say
+which you recommend and why.
 ```
 
 ## 9. Draft of the whole video (gate 7)

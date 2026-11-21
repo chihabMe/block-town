@@ -2,7 +2,7 @@
 
 Run an episode through run.py (never directly):
     blender -b --factory-startup --python-exit-code 1 -P <skill>/blockworld/run.py -- EPISODE_DIR MODE [args]
-MODE:  check                 no rendering: runs every shot function, prints the shot table and warnings (fast)
+MODE:  check [shot ...]      no rendering: checks all shots, or only the named shots
        stills [shot ...]     two half-size stills per shot (30% and 85% through) -> EPISODE_DIR/stills/
        frame SECONDS         one half-size still at that time -> EPISODE_DIR/stills/at_<seconds>.jpg
        render [f0 f1]        final frames 1080x1920 -> EPISODE_DIR/frames/f_####.jpg (optionally only a frame range)
@@ -531,6 +531,8 @@ def run(shots, end=None, tod="day"):
         warn = []
         print(f"\n{'#':>3} {'shot':<16}{'start':>7}{'len':>6}  words")
         for i, (n, s, _) in enumerate(shots):
+            if ARGS[2:] and n not in ARGS[2:]:
+                continue
             d = stops[i] - s
             for k in (0.0, 0.3, 0.6, 0.999):
                 frame(s + d * k)
