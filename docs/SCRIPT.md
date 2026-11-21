@@ -1,8 +1,15 @@
 # Writing the story
 
 An "In this town / In this world" video is one strange rule and one story it causes, told by a fast narrator over
-pictures that change every second. Target a **60-second Short: about 240 words**, which the voice reads in about
-60 s (docs/VOICE.md).
+pictures that change every second.
+
+**Length: 90-120 seconds, about 360-470 words** (the voice reads about 237 words a minute, docs/VOICE.md). Aim for
+about 105 s (~410 words). A light comedy can be 70-90 s (~280-350 words). **Never under 61 s**: TikTok's Creator
+Rewards only pays for videos over one minute, and `preflight.py` and `post_kit.py` flag anything shorter.
+
+Why (research, Nov 2026): the 20 million-view niche stories we measured run 56-155 s with a 116 s median; the big
+Roblox story channels make 1:45-2:30; the French horror hits run 88-196 s. A 60 s script has no room to build the
+town, plant the clues and land the twist (`research/skill-gaps-2026-11-21/REPORT.md`).
 
 ## 1. The rule
 
@@ -22,22 +29,27 @@ joke or twist from another creator's video.
 
 ## 2. The shape (8 beats, with what the top videos add)
 
-| Beat | Time (60 s) | What happens |
+Times are a share of the whole video, with the second it falls on in a 105 s video.
+
+| Beat | When (105 s) | What happens |
 |---|---|---|
 | 1 Hook | 0:00 | Two lines. Line 1: the rule, one sentence, said to "you". Line 2: the contrast, one person on the losing side or what's about to go wrong. The landmark and the official sign are on screen in the first second. See the hook check below. |
-| 2 How it works | 0:05 | "You see," then 3–4 fast, concrete, funny consequences with numbers ("stream movies in 4K"). |
-| Everyone obeys | ~0:12 | A list of three: "Nobody honks. Nobody cuts in line. Not even the bus driver." |
-| Punished first | ~0:17 | Show the punishment on someone else before the hero ("his phone froze for three whole days"). |
-| 3 Underdog | ~0:22 | "My name is ___" and why the rule hurts them. Plant a word or object that comes back at the end. |
-| 4 Stakes | ~0:30 | Someone they love needs them. Hide the twist's clue here, in plain sight. |
-| 5 Tries | ~0:40 | Three escalating attempts with ticking numbers, each failing ("I held fifty doors. Zero bars."). |
-| 6 Cost | ~0:48 | The system pushes back (a poster, a new law, friends turn away). |
-| 7 Twist | ~0:52 | The rule meant something else all along, and it was fair from the first line. |
-| 8 Button | ~0:57 | Two lines at most: the callback, now funny, or one quotable line. Then stop. |
+| 2 How it works | 5 % (0:05) | "You see," then 3–4 fast, concrete, funny consequences with numbers ("stream movies in 4K"). |
+| Everyone obeys | 12 % (0:13) | A list of three: "Nobody honks. Nobody cuts in line. Not even the bus driver." |
+| Punished first | 18 % (0:19) | Show the punishment on someone else before the hero ("his phone froze for three whole days"). |
+| 3 Underdog | 25 % (0:26) | "My name is ___" and why the rule hurts them. Plant a word or object that comes back at the end. |
+| 4 Stakes | 35 % (0:37) | Someone they love needs them. Hide the twist's clue here, in plain sight. |
+| 5 Tries | 50 % (0:53) | Three escalating attempts with ticking numbers, each failing ("I held fifty doors. Zero bars."). In a 105 s video each try gets its own small scene, and the second one can be a false win. |
+| 6 Cost | 70 % (1:14) | The system pushes back (a poster, a new law, friends turn away). |
+| 7 Twist | 80 % (1:24) | The rule meant something else all along, and it was fair from the first line. |
+| 8 Button | 95 % (1:40) | Two lines at most: the callback, now funny, or one quotable line. Then stop. In a series part, the button is the new danger instead (section 5). |
 
 Style:
 - 4–10 words a sentence, one idea each, **every sentence something the camera can show**.
 - At least six numbers. Short dialogue, max 8 words, said by the narrator.
+- The longer length is for more story, not slower story: keep the pace (237 words a minute) and the 0.7-2.5 s shots.
+  Use the extra time to show the town under the rule, plant the clues and give each try its own scene.
+  Open a new question at least every 15-20 s.
 - Kid-level words, no swearing or gore, English for ages 10–16.
 - One sentence per line in `script.txt`: the narration is one take, and the lines only help planning.
 
@@ -65,10 +77,11 @@ showing them (or say why a lower score is on purpose). Mark the recommended one;
 1. Opens with "In this town" / "In this world".
 2. Rule ≤ 10 words, concrete, visual.
 3. Self-insertion. 4. A loophole to argue about.
-5. Underdog before ~0:25 and hurt by the rule. 6. Stakes before 0:50.
+5. Underdog by ~25 % and hurt by the rule. 6. Stakes by ~40 %.
 7. Escalation with ticking numbers. 8. Twist reinterprets the rule, with its clue hidden earlier.
-9. Ends within two lines, no unresolved cliffhanger. 10. A callback from the first 30 s.
-11. Short, visual sentences. 12. About 240 words (60 s).
+9. The ending. A single video: ends within two lines, nothing left open. A series part that isn't the last: a real
+   result first, then one new danger in the last lines (section 5). 10. A callback from the first 30 s.
+11. Short, visual sentences. 12. Length: 90-120 s, about 360-470 words (comedy 70-90 s); never under 61 s.
 13. The hook check: no delay, no confusion, relevant, curious (score each; rewrite the first two lines until all four
     are 8 or more).
 
@@ -77,7 +90,8 @@ Write it all into `EPISODE/SCRIPT.md` (`examples/ep05-wifi/SCRIPT.md` is the pat
 
 ## 4. From script to shots (gate 5)
 
-- **One shot per spoken clause**, 0.7–2.5 s each; about 40 shots for 60 s. Split any line over 2.5 s.
+- **One shot per spoken clause**, 0.7–2.5 s each; about 40 shots a minute (about 70 for 105 s). Split any line
+  over 2.5 s.
 - **The picture shows the exact words being said**: "4K" → a "4K" tag pops on the word; "froze" → a frozen phone.
 - Cut 0.04 s before a word: `wcut(i)` with the word's index in `script.txt` (0-based).
 - Pop tags and faces on the word: `wpop(i)` returns 0 → 1 over 0.14 s when word `i` is spoken.
@@ -89,3 +103,53 @@ Write it all into `EPISODE/SCRIPT.md` (`examples/ep05-wifi/SCRIPT.md` is the pat
 - Pop-up graphics (name tags, meters, "+1" pops, comic words, time cards, the top bar, the end card) come from
   `blockworld/overlay.py`. House style: "Roblox game UI" (outlined text on a see-through dark plate) with yellow comic
   words, picked by the user in Nov 2026. Its docstring lists every call.
+
+## 5. Series (Part 1, Part 2, ...)
+
+A series is a story told in 2-3 videos, each 90-120 s. On our channel it is what works best: Hush Part 1 kept growing
+for days while single videos stopped after a day, and "Part 2" videos had a 672k median in the Nov 4 scrape (small
+sample). But only about 1 in 9 Hush Part 1 viewers found Part 2, so every part has to stand alone and point clearly
+to the next one.
+
+**When.** Offer it at gate 1 for any idea with a mystery or a monster (horror, creature rules, "who is it?"), and
+mark which of the five ideas would work as a series. The user decides. A comedy rule is usually a single video.
+
+**Plan the whole series before writing Part 1.** At gate 2, write Part 1 in full and a 3-line outline of each later
+part (what happens, the result it gives, the new danger it ends on). Part 1's last danger must be one the outline
+pays off.
+
+**The series bible.** One `SERIES.md` beside the part folders (`episodes/ep20-hushers/SERIES.md`, parts in `part1/`,
+`part2/`, ...), written at gate 2 and read before every later part's script, designs and shots:
+- the rule, word for word as Part 1 says it;
+- the cast: who, their outfit and face, their voice settings if they speak;
+- the places and the landmark (with their `place()` calls);
+- the creature or prop designs that must not change (file and function names);
+- what each part showed and what it left open (update it after each part is posted);
+- the look: mood, grade, sounds that repeat (a chant, a knock).
+
+**series.json** in every part folder, read by `preflight.py` and `post_kit.py`:
+
+```json
+{"name": "The Hushers", "part": 1, "parts": 3, "bible": "../SERIES.md", "playlist": "The Hushers"}
+```
+
+**Part 1 script.**
+- The normal 8 beats, but the button is the new danger: give a real result first (the power comes back, the try
+  works), then open one new danger in the last 2-3 lines. "Wait for Part 2" with nothing solved is weak.
+- The last spoken line points to the next part: "Part two is on my page."
+- Score critic item 9 on the series rule, not the single-video one.
+
+**Part 2 and later.**
+- Line 1 is the same rule, word for word (the search hook and the sound-off hook stay the same).
+- Line 2 is a one-line recap that is also a hook ("And last night, one of them was breathing our chant at our
+  window."). Most Part 2 viewers come from the For You feed and never saw Part 1, so it has to make sense alone.
+- Pay off Part 1's danger in the first third, then open the next one. The last part ends like a single video.
+- Same cast, places, designs and sounds as the bible. Don't switch looks between parts.
+
+**On screen** (`overlay.py`):
+- `hud(None, "PART 1")` top right for the hook (first ~3 s) and for the last ~5 s.
+- The last ~2 s: `timecard("PART 2", t, dur=2.0, sub="ON MY PROFILE")`. In the last part: an `endcard()` question
+  instead.
+
+**Posting** is in the post kit (`post_kit.py`, gate 9): the order, the gap between parts (3-6 h), the playlist, the
+pinned comments and the video reply that links Part 2 from Part 1's comments.

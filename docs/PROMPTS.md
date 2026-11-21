@@ -15,7 +15,7 @@ Research folder: {e.g. ~/Documents/projects/tiktok-videos/research/in-this-world
 Follow SKILL.md's gates and stop after each one for my answer:
 0 research (tell me the Apify cost first), 1 five ideas, 2 three scripts, 3 voice (free Fish take),
 4 design sheet, 5 contact sheet, 6 {4} opening variants as drafts, 7 a fast draft of the whole video and fix rounds,
-8 the final full-quality render once I approve the draft.
+8 the final full-quality render once I approve the draft, 9 the post kit (POST.md).
 Mark your recommended pick at every choice; if I say "go with yours", take it.
 Don't spend money (Apify, paid voice, ElevenLabs) or download anything without asking me first.
 ```
@@ -38,18 +38,30 @@ Give me {5} "In this world / In this town" ideas for {theme, "anything", or "wha
 docs/RESEARCH.md: rule as spoken (10 words or fewer), mood (at least three moods across them), a two-line story
 (underdog, tries, twist), the landmark, why now (a pattern from the research, with a number), fresh (not taken,
 not in RULE_BANK.md), and a score on docs/SCRIPT.md's five tests. One table, then your recommended pick and why in
-one line. Add all of them to RULE_BANK.md with today's date.
+one line. Say for each whether it works as a single video or a 2-3 part series. Add all of them to RULE_BANK.md
+with today's date.
 ```
 
 ## 4. Scripts (gate 2)
 
 ```
-Write three scripts for idea {n}. Follow docs/SCRIPT.md: 60 seconds, about 240 words, one sentence a line,
+Write three scripts for idea {n}{, as Part 1 of a {3}-part series}. Follow docs/SCRIPT.md: 90-120 seconds, about
+360-470 words (never under 61 s), one sentence a line,
 the 8 beats with "everyone obeys" (a list of three) and "punished first", a callback and a fair twist whose clue is
 hidden in beat 4. The first two lines are the hook: the rule said to "you", then a contrast line. A, B and C must
 differ in twist, tone or underdog. Score each on the 13-point critic list (13 is the hook check), fix anything under 8, and write all three to EPISODE/SCRIPT.md (pattern: examples/ep05-wifi/SCRIPT.md) with a beat table
 for each. Recommend one. Put my pick (or yours, if I say "go with yours") in EPISODE/script.txt and list what the
-pictures need: landmark, signs, props, tags, cast roles.
+pictures need: landmark, signs, props, tags, cast roles. For a series: follow docs/SCRIPT.md section 5, write a
+3-line outline of every later part, SERIES.md (the bible) and series.json in the part folder.
+```
+
+## 4b. A later part of a series (gate 2)
+
+```
+Write three scripts for Part {n} of the series in {series folder}. Read SERIES.md first and follow docs/SCRIPT.md
+section 5: the same line 1 word for word, a recap line that is also a hook, Part {n-1}'s danger paid off in the
+first third, then {the next danger / a real ending}. Same cast, places and designs as the bible. 90-120 s.
+Score, recommend, put the pick in {series folder}/part{n}/script.txt with series.json, and update SERIES.md.
 ```
 
 ## 5. Voice (gate 3)
@@ -118,4 +130,14 @@ with the paid model, words.py, level_voice.py, check, and one more draft for me 
 "render_fps": 240, "blur": 4 (and the grade if the story has a turn), run render_threejs.sh EPISODE in the
 background and finish.py EPISODE with my music file {path or "none"}. Check the length, the loudness and one frame
 per shot, then send me both MP4s. After I accept, delete threejs/, frames/ and frames_draft/.
+```
+
+## 12. Post kit (gate 9)
+
+```
+Make the post kit for EPISODE (docs/POSTING.md). Run post_kit.py once for the starter post.json, then write the
+caption (line 1 = the rule as the search hook, one CAPS word, 2-3 lines without the twist, a question, the next
+part if it's a series), 3-6 hashtags and the pinned comment. Ask me whether to turn on the AI label. Run
+post_kit.py again until every check passes, look at the cover candidates, and send me POST.md with the cover you
+recommend.
 ```
