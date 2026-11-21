@@ -22,7 +22,8 @@ chat extras: ["me", ["line"]] is your own blue bubble on the right, ["note", "De
   {"kind": "device", "header": "OXYGEN", "status": "ON BATTERY", "big": "10:00", "unit": "MINUTES LEFT", "flow": "3 L/min"}   a machine display
   {"kind": "town_map", "title": "TOWN MAP"}                                    the folded paper map
   {"kind": "class_photo", "title": "CLASS 4B", "empty": 3}                     a printed class photo, one empty chair
-"avatar": {"face": "smile", "skin": [235, 200, 168], "hair": [222, 226, 232]} draws any contact picture.
+"avatar": {"face": "smile", "skin": [235, 200, 168], "hair": [222, 226, 232]} draws any contact picture
+  ("bun": true adds a bun, "long": true long hair).
 
 Phone screens are 1080 x 2216 (big_phone's 5.6 x 11.5 stud screen). big_phone's 3D loading spinner turns at 37.8 %
 from the bottom: wifi_search and calling leave that area empty. Generic phone look only: no brand, app or logo.
@@ -43,6 +44,7 @@ CAST = {                                                         # contact pictu
     "max": dict(face="smile", skin=(201, 138, 90), hair=(43, 98, 217), bun=False),
     "teacher": dict(face="smile", skin=(228, 181, 138), hair=(92, 60, 40), bun=True),
     "dad": dict(face="smile", skin=(122, 74, 44), hair=(20, 20, 24), bun=False),
+    "zoe": dict(face="shy", skin=(232, 185, 148), hair=(42, 29, 23), long=True),
 }
 _FONTS = {}
 
@@ -140,6 +142,8 @@ def avatar(spec, size):
     im = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     d = ImageDraw.Draw(im)
     d.ellipse([0, 0, size - 1, size - 1], fill=(205, 222, 240))
+    if a.get("long"):                                         # long hair falls past the face on both sides
+        d.rounded_rectangle([size * 0.13, size * 0.2, size * 0.87, size * 1.0], size * 0.1, fill=hair)
     d.rounded_rectangle([size * 0.2, size * 0.24, size * 0.8, size * 0.86], size * 0.12, fill=skin)
     d.pieslice([size * 0.16, size * 0.06, size * 0.84, size * 0.62], 180, 360, fill=hair)
     if a.get("bun"):

@@ -107,6 +107,70 @@ Draft, 2026-11-12. Nothing has been generated yet. The narration is not affected
 | ep07-bin-rattle | A metal bin rattling hard with dozens of phones buzzing inside it | 1.5 s | "At 3 AM, the bin buzzed." |
 | ep07-heartbeat | Two slow heavy heartbeats, tense | 1.2 s | Her finger on send |
 
+## 2c. ep20 extras (The Hushers)
+
+| File | Prompt | Length | Use |
+|---|---|---|---|
+| ep20-door-knock | Three slow heavy knuckle knocks on a solid wooden front door, heard from inside a quiet dark house, natural hallway echo, no voices | 2.2 s | "something knocked on our door" |
+| ep20-glass-tap | One sharp tap of a long fingernail on a window pane, the glass rings softly, silent night room | 0.8 s | the face taps the window |
+| ep20-power-out | The electricity cuts out in a house at night: a loud breaker clunk, then the fridge hum and light buzz die away into silence | 2.2 s | "the power went out" |
+| ep20-power-on | Power comes back on in a house: an electric thunk, then lights buzz and the fridge hum starts up | 1.8 s | "the power came back" |
+| ep20-creature-breath | Slow deep raspy breathing of a huge unseen creature pressed right against a window, close and wet, horror | 2.5 s | the face at the window |
+| ep20-grab-lift | A man is suddenly snatched and yanked high into the air: fast whoosh, cloth rustle, short choked gasp | 1.3 s | "gets you taken" |
+| ep20-horror-sting | Sharp horror jump-scare string stab with a deep low boom underneath | 1.6 s | the face appears |
+| ep20-night-street-loop | Eerie quiet suburban street at night: soft wind, very distant dog, faint electrical hum, no music, seamless loop | 8.0 s | under the street shots |
+
+## 2d. ep19 Part 2 extras (Phone Monsters)
+
+| File | Prompt | Length | Use |
+|---|---|---|---|
+| ep19-pack-run-loop | A pack of huge heavy creatures running on asphalt at night, many thundering overlapping footsteps, ground shaking, no voices, seamless loop | 4.0 s | the chase |
+| ep19-kid-run-loop | A kid sprinting in sneakers on a street at night, quick light footsteps and fast panting, seamless loop | 3.0 s | Max running |
+| ep19-door-slam | A front door slammed hard from inside a house: heavy wood thud, the latch clicks, then a lock turns | 1.5 s | Nia slams the door |
+| ep19-low-battery | Two short soft electronic beeps, a phone low-battery warning, clean, no tail | 0.5 s | 3%, 2%, 1% |
+| ep19-phone-dies | A phone screen shutting off: a short descending electronic blip, then dead silence | 0.7 s | the screen goes black |
+| ep19-creature-sniff | A huge creature sniffing the air right next to someone's face: three slow deep wet sniffs | 2.0 s | sniffing for light |
+| ep19-charger-plug | A phone charging cable plugged in: small plastic click and a soft charging chime | 0.8 s | the phone charges |
+| ep19-skin-creak | Eerie organic creaking and crackling as a hand changes shape, subtle body horror, quiet and close | 2.0 s | thumbs turning purple |
+
+## 2e. ep21 extras (Shadow Gym)
+
+| File | Prompt | Length | Use |
+|---|---|---|---|
+| ep21-pushup-breath | One sharp forceful exhale through the teeth on a push-up, close and dry, low eerie male breath, no words | 0.7 s | each shadow rep |
+| ep21-pushup-loop | Someone doing fast push-ups on a wooden bedroom floor at night: palms creak on the boards, steady hard breathing, close, seamless loop | 3.0 s | the shadow training by the bed |
+| ep21-wall-peel | A sticky dark shape slowly peeling off a painted wall, like thick tape tearing, wet and eerie, close | 1.4 s | the shadow peels off the wall |
+| ep21-swap-whoosh | A dark supernatural swap: a fast low whoosh that reverses into a deep soft thud, short | 1.0 s | the shadow takes his place |
+| ep21-fridge-lift | A heavy fridge lifted overhead: bottles clink and rattle inside, the metal body creaks, an old woman grunts once | 1.6 s | Grandma's fridge |
+| ep21-egg-gulp | Two big slimy gulps of raw eggs from a glass, then the glass set down on a counter, close | 1.2 s | raw eggs |
+| ep21-ankle-grab | A cold hand suddenly clamps around a kid's ankle: sharp fabric squeeze and skin slap, then a short gasp | 0.8 s | the black hand grabs |
+| ep21-bed-drag (empty file twice, not used; ep20-grab-lift instead) | A kid dragged off a bed onto a wooden floor: sheets slide fast, body thuds on the boards, fingers scrape | 1.8 s | the yank |
+| ep21-crowd-murmur-loop | A small town crowd outside in daylight, tense low murmuring and shuffling, no clear words, seamless loop | 5.0 s | the arm-wrestling match |
+| ep21-crowd-cheer | A small town crowd erupts in a big cheer and applause outdoors, short | 2.0 s | the win |
+| ep21-table-slam | A fist slammed hard onto a wooden table: a heavy wood bang with a rattle | 0.8 s | "Slam." |
+| ep21-arm-strain | Two people arm wrestling: a wooden table creaks under pressure, strained grunting breaths through teeth | 2.5 s | the match |
+| ep21-melt | A body melting into a black liquid puddle: thick gloopy bubbling and a wet collapse, eerie | 2.0 s | the fake dad melts |
+| ep21-finger-write | A fingertip slowly scraping letters onto a wall, dry squeaky drag, eerie and close | 1.5 s | Dad writes FIGHT |
+| ep21-kick-free | A kid kicks free of a grip: a hard foot thump on a hand, a hiss, and quick scrambling on sheets | 1.0 s | Max kicks free |
+
+## 2f. ep22 extras (3 AM Mom)
+
+| File | Prompt | Length | Use |
+|---|---|---|---|
+| ep22-stair-creak | One slow creaky wooden stair step at night in a quiet house, a kid's weight, close | 1.2 s | the foot on the stairs |
+| ep22-door-creak | A bedroom door slowly creaking open in a silent dark house at night | 2.0 s | "my door opened again" |
+| ep22-shoulder-grab | A hand suddenly grips a kid's shoulder from behind: soft fabric squeeze, a sharp gasp | 0.8 s | the hand on the shoulder |
+| ep22-mouth-stretch | A human jaw stretching open far too wide: slow wet creaking and cracking, body horror, close | 2.0 s | the Copy's mouth opens |
+| ep22-pan-sizzle | Pancakes sizzling in a frying pan in a kitchen, heard from upstairs, distant and muffled | 3.0 s | "I made pancakes" |
+| ep22-wall-scratch (came back empty, not used) | Something scratching and shifting inside a wall, slow fingernails on plaster, quiet and close | 2.0 s | it hides in the walls |
+
+## 2g. ep20 Part 3 extras (The Hushers)
+
+| File | Prompt | Length | Use |
+|---|---|---|---|
+| ep20-window-shatter | A bedroom window exploding inward at night: a loud glass smash with shards raining on a wooden floor | 1.6 s | "The window exploded." |
+| ep20-speaker-giggle | A tiny electronic baby monitor speaker playing back a little girl's giggle, slightly distorted and wrong, eerie | 1.8 s | the speaker laughs with her |
+
 ## 3. ep05: current cue → new sound
 | Moment (cues.json) | Now | New |
 |---|---|---|

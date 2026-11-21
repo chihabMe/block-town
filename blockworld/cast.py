@@ -33,6 +33,10 @@ EXTRAS = {
              "a baby (ep05)"),
     "jake": (("Jake", "#E0B080", "#14B8C4", "#243044", "tuft", "blond"), dict(stripes="#F4F7FA", shoes="#F2F2F2"), (),
              "a school kid in a striped tee (ep03)"),
+    "zoe": (("Zoe", "#E8B994", "#2EC4A6", "#2B3350", "long", "#2A1D17"), dict(sleeves="long", strings=True, seed=41), (),
+            "Zoe, Max's classmate who sits behind him in math: teal hoodie, long dark hair (ep11 v4)"),
+    "mom": (("Mom", "#C98A5A", "#9C7BE0", "#4A4378", "long", "#2A1D17"), dict(sleeves="long", seed=51), (),
+            "Max's mom, in lilac pajamas (ep22)"),
     "remy": (("Remy", "#F0C8A0", "#3A7BD5", "#2A2A32", "curl", "brown"), dict(scale=0.75, shoes="#F2F2F2"), (),
              "a small kid (ep03)"),
 }

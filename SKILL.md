@@ -82,6 +82,8 @@ so always write `style="roblox"` in a new episode.
 
 ## Quality bar (what the user rejected or asked for)
 
+- **Human walking and running:** use the approved grounded locomotion in `blockworld/locomotion.py`; read `docs/LOCOMOTION.md`. The user selected the faster ep18 chase after rejecting slow running and feet skating in place. Match stride distance to actual root travel, plant the support foot, use the correct floor height, and keep the legs visible. This is an explicit opt-in for new or revised shots; preserve existing accepted shots.
+
 - **Nothing is ever static.** Render with the life layer (`BT_LIFE=1`, the default in `render_threejs.sh`): breathing,
   glances, weight shifts, a bounce on every cut, camera wobble and punch-ins, swaying trees, drifting clouds, floating
   tags, turning loading spinners, pulsing Wi-Fi rings, bouncing signal bars. A shot where only the camera creeps is a

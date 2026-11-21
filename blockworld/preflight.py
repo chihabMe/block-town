@@ -6,7 +6,7 @@ and the episode's files, and says what to run for anything missing.
 
 Exit code 1 if something needed is missing. Optional things (ElevenLabs, music) are listed but do not fail the check.
 """
-import json, os, re, shutil, sys, wave
+import importlib.util, json, os, re, shutil, sys, wave
 from pathlib import Path
 
 SKILL = Path(__file__).resolve().parent.parent
@@ -48,9 +48,17 @@ def machine():
         "render_threejs.sh installs them on first use", need=False)
     cli = os.environ.get("WHISPER_CLI") or shutil.which("whisper-cli") or \
         (HOME / ".cache/hyperframes/whisper/whisper.cpp/build/bin/whisper-cli")
-    row(Path(cli).exists(), "whisper-cli (word times)", "set WHISPER_CLI")
+    faster = importlib.util.find_spec('faster_whisper') is not None
+    python_whisper = importlib.util.find_spec('whisper') is not None
+    row(Path(cli).exists() or faster or python_whisper,
+        "word-timing engine (whisper-cli or Python Whisper)",
+        "set WHISPER_CLI or run with the installed Whisper Python environment")
     model = Path(os.environ.get("WHISPER_MODEL") or HOME / ".cache/hyperframes/whisper/models/ggml-small.en.bin")
-    row(model.exists(), "whisper model", "set WHISPER_MODEL to ggml-small.en.bin")
+    faster_models = HOME / '.cache/huggingface/hub/models--Systran--faster-whisper-small.en/snapshots'
+    cached_faster = faster and any(p.exists() for p in faster_models.glob('*/model.bin'))
+    cached_python = python_whisper and (HOME / '.cache/whisper/small.en.pt').exists()
+    row(model.exists() or cached_faster or cached_python, "whisper model",
+        "set WHISPER_MODEL or provide the cached small.en model for the Python engine")
     row((BW / "fonts" / "InterDisplay-Black.ttf").exists(), "caption font")
     rows.append("keys (set or not; values are never read out)")
     row(key_set("OPENROUTER_API_KEY"), "OPENROUTER_API_KEY (Fish voice)", "add it to ~/.env")

@@ -472,7 +472,8 @@ window.renderAt = (i) => {
   key.position.set(k.p[0], k.p[1], k.p[2]);
   key.intensity = k.e / (4 * Math.PI);
   key.color.setRGB(k.c[0], k.c[1], k.c[2], THREE.LinearSRGBColorSpace);
-  for (const l of lamps) l.intensity = A.lamp[i] / (4 * Math.PI);      // Blender watts -> rough candela
+  const le = A.lamp[i];                                                 // one value, or one per lamp (a lamp goes out)
+  lamps.forEach((l, j) => { l.intensity = (Array.isArray(le) ? le[j] : le) / (4 * Math.PI); });   // watts -> candela
   const tS = performance.now();
   renderer.info.reset();
   renderer.clear();
@@ -680,7 +681,11 @@ function drawOverlays(ctx, items, W, H) {
         words(ctx, it.right, cx, y0 + px * 0.04, px, "#FFD84A", INK, 0.0, TAG_WT);
       }
     } else if (it.kind === "endcard") {
-      const t = it.t, px = 0.095 * H, cy = (-0.15 + ((it.ty ?? 0.17) + 0.15) * backEase(t / 0.4)) * H;   // title
+      const t = it.t, cy = (-0.15 + ((it.ty ?? 0.17) + 0.15) * backEase(t / 0.4)) * H;   // title
+      let px = 0.095 * H;
+      ctx.font = fontPx(px);
+      const tw = ctx.measureText(it.text).width;
+      if (tw > 0.8 * W) px *= 0.8 * W / tw;                                        // a long question shrinks to fit
       ctx.fillStyle = `rgba(0,0,0,${Math.min(0.35, t * 0.9)})`; ctx.fillRect(0, 0, W, H);
       ctx.save(); ctx.translate(W / 2, cy); ctx.rotate(-4 * Math.PI / 180);
       ctx.font = fontPx(px); ctx.textAlign = "center"; ctx.textBaseline = "middle";

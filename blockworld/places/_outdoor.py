@@ -139,7 +139,7 @@ def lamp(r, lx, ly, arm=(0, -1)):
     post = T.mat(T.LAMP_POST)
     T.box((0.5, 0.5, 13.2), (0, 0, 6.6), post, e)
     T.box((0.4 + 3.8 * abs(ax), 0.4 + 3.8 * abs(ay), 0.4), (ax * 2.0, ay * 2.0, 13.0), post, e)
-    T.box((1.0 + 1.0 * abs(ax), 1.0 + 1.0 * abs(ay), 0.5), (ax * 3.6, ay * 3.6, 12.6), T.LAMP_BULB, e)
+    bulb = T.box((1.0 + 1.0 * abs(ax), 1.0 + 1.0 * abs(ay), 0.5), (ax * 3.6, ay * 3.6, 12.6), T.LAMP_BULB, e)
     T.box((1.3 + 1.1 * abs(ax), 1.3 + 1.1 * abs(ay), 0.32), (ax * 3.6, ay * 3.6, 12.98), post, e)   # shade
     li = bpy.data.lights.new("lampL", "SPOT")
     li.color = T.lin("#FFBD6B")[:3]
@@ -152,4 +152,5 @@ def lamp(r, lx, ly, arm=(0, -1)):
     lo.parent = e
     T.COL.objects.link(lo)
     T.LAMPS.append(li)
+    T.register_bulb(li, bulb)
     return e

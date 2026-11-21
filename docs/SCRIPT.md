@@ -24,8 +24,8 @@ joke or twist from another creator's video.
 
 | Beat | Time (60 s) | What happens |
 |---|---|---|
-| 1 Rule | 0:00 | The rule, one sentence. The landmark and the official sign are on screen in the first 2 s. |
-| 2 How it works | 0:03 | "You see," then 3–4 fast, concrete, funny consequences with numbers ("stream movies in 4K"). |
+| 1 Hook | 0:00 | Two lines. Line 1: the rule, one sentence, said to "you". Line 2: the contrast, one person on the losing side or what's about to go wrong. The landmark and the official sign are on screen in the first second. See the hook check below. |
+| 2 How it works | 0:05 | "You see," then 3–4 fast, concrete, funny consequences with numbers ("stream movies in 4K"). |
 | Everyone obeys | ~0:12 | A list of three: "Nobody honks. Nobody cuts in line. Not even the bus driver." |
 | Punished first | ~0:17 | Show the punishment on someone else before the hero ("his phone froze for three whole days"). |
 | 3 Underdog | ~0:22 | "My name is ___" and why the rule hurts them. Plant a word or object that comes back at the end. |
@@ -41,6 +41,21 @@ Style:
 - Kid-level words, no swearing or gore, English for ages 10–16.
 - One sentence per line in `script.txt`: the narration is one take, and the lines only help planning.
 
+### The hook check (the first two lines)
+
+From Kallaway's "4 hook mistakes" video (Nov 2026). A hook has two jobs: the viewer knows at once what the video is
+about, and wants to know what happens next. Test the first two lines on all four:
+
+| Mistake | Test | Bad → good |
+|---|---|---|
+| Delay | Line 1 starts with the rule; its picture is on screen within 1 s. No warm-up line. | "This is the weirdest town ever…" → "In this town, you pay your parents rent." |
+| Confusion | Line 1 is ≤ 12 kid-level words, active voice, and can only be read one way. Read it alone: could anyone picture it wrong? | "phones photograph whoever watches you sleep" → "at 3 AM, your phone photographs whoever is watching you sleep" |
+| Irrelevance | The rule says "you" or "your", so viewers picture their own life under it. | "kids pay rent to their parents" → "you pay your parents rent" |
+| Disinterest | Line 2 sets up a contrast (what the viewer expects against what the rule does to one person) and opens a question they must stay to answer. | "You see, rich kids get big rooms…" → "Max is three weeks late. Tonight, Mom changed the locks." |
+
+After the hook, keep the loop going: open the next question before answering the last one. The caption with one CAPS
+word and the first picture must tell the same hook for viewers watching with the sound off.
+
 ## 3. Options and the critic check
 
 Write **three full scripts** (A, B, C) for the chosen idea, each a real alternative: a different twist, tone or
@@ -54,6 +69,8 @@ showing them (or say why a lower score is on purpose). Mark the recommended one;
 7. Escalation with ticking numbers. 8. Twist reinterprets the rule, with its clue hidden earlier.
 9. Ends within two lines, no unresolved cliffhanger. 10. A callback from the first 30 s.
 11. Short, visual sentences. 12. About 240 words (60 s).
+13. The hook check: no delay, no confusion, relevant, curious (score each; rewrite the first two lines until all four
+    are 8 or more).
 
 Write it all into `EPISODE/SCRIPT.md` (`examples/ep05-wifi/SCRIPT.md` is the pattern) and put the chosen version in
 `EPISODE/script.txt`.
@@ -66,6 +83,9 @@ Write it all into `EPISODE/SCRIPT.md` (`examples/ep05-wifi/SCRIPT.md` is the pat
 - Pop tags and faces on the word: `wpop(i)` returns 0 → 1 over 0.14 s when word `i` is spoken.
 - Phone screens, posters and signs are **inserts**: a close shot of the object, often while the line says it.
 - Every few shots, a wide shot of the street or the landmark so the viewer knows where they are.
+- **A motion graphic at least every 8 seconds** (the user's rule, Nov 2026): a `comic()` word that pops and shakes,
+  a `timecard()` that slides in, a `pop()` or the `endcard()`, on a word the narration says ("FREEZE!", "SINCE
+  TUESDAY", "RUN?!"). Plain tags (`card`/`put`) don't count. `examples`: `episodes/ep-freeze-hook/episode.py`.
 - Pop-up graphics (name tags, meters, "+1" pops, comic words, time cards, the top bar, the end card) come from
   `blockworld/overlay.py`. House style: "Roblox game UI" (outlined text on a see-through dark plate) with yellow comic
   words, picked by the user in Nov 2026. Its docstring lists every call.

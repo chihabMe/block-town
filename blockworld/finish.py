@@ -90,7 +90,7 @@ def write_karaoke(ep, script, start, stop):
     groups, cur = [], []
     for i, word in enumerate(script):
         cur.append(i)
-        if len(cur) == 3 or re.search(r"[.,!?:;]$", word) or i == len(script) - 1:
+        if len(cur) == 3 or re.search(r"[.,!?:;][\"'\u201d\u2019)]*$", word) or i == len(script) - 1:   # kid." ends too
             groups.append(cur)
             cur = []
     clean = [re.sub(r"(?<!\d):|:(?!\d)", "", re.sub(r"[^\w':$%-]", "", w)) for w in script]   # keep 2:59

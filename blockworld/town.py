@@ -397,6 +397,7 @@ LAMP_POST = "#6A7080"                            # street lamp posts (ep07: ligh
 DARK = mat("#22232B")
 SIGN_TEXT = ("#FFD84A", 2.5, "signtext")
 LAMPS = []
+BULB_OF = {}                                      # light name -> its glowing bulb (lamp_power switches both)
 PAL = [("#7C8C7A", "#657564"), ("#5F6F86", "#4C5A70"), ("#C9B98A", "#AD9D70"), ("#8D6F8F", "#745A76"),
        ("#6E9AA6", "#58808B"), ("#B9826A", "#9B6A55")]     # muted house walls: (wall, band)
 
@@ -552,7 +553,7 @@ def lamp(x, y):
     post = mat(LAMP_POST)                     # mid grey: a near-black post vanished at night and the bulb seemed to float
     box((0.5, 0.5, 13.2), (0, 0, 6.6), post, r)
     box((4.2, 0.4, 0.4), (sx * 2.0, 0, 13.0), post, r)
-    box((2.0, 1.0, 0.5), (sx * 3.6, 0, 12.6), LAMP_BULB, r)
+    bulb = box((2.0, 1.0, 0.5), (sx * 3.6, 0, 12.6), LAMP_BULB, r)
     box((2.4, 1.3, 0.32), (sx * 3.6, 0, 12.98), post, r)                   # a shade over the bulb
     li = bpy.data.lights.new("lampL", "SPOT")
     li.color = lin("#FFBD6B")[:3]
@@ -565,6 +566,7 @@ def lamp(x, y):
     lo.parent = r
     COL.objects.link(lo)
     LAMPS.append(li)
+    register_bulb(li, bulb)
     return r
 
 
@@ -684,6 +686,25 @@ def emission(material, strength):
     material.node_tree.nodes["Principled BSDF"].inputs["Emission Strength"].default_value = strength
 
 
+def lamp_power(i, k):
+    """Dim (0 < k < 1) or switch off (k = 0) street lamp i (an index into LAMPS, or an (x, y) spot: the nearest lamp).
+    Call it inside a shot after any time_of_day(); every frame starts with all lamps on. The Three.js render lights
+    each lamp on its own, so lamps can go out one by one."""
+    if not isinstance(i, int):
+        spots = [BULB_OF[li.name].matrix_world.translation for li in LAMPS]
+        i = min(range(len(LAMPS)), key=lambda j: (spots[j].x - i[0]) ** 2 + (spots[j].y - i[1]) ** 2)
+    LAMPS[i].energy *= k
+    b = BULB_OF.get(LAMPS[i].name)
+    if b is not None:
+        b.scale = tuple(b["bt_size"]) if k > 0.05 else (0.001,) * 3
+
+
+def register_bulb(light, bulb):
+    """Pair a lamp's light with its glowing bulb so lamp_power can switch both."""
+    bulb["bt_size"] = tuple(bulb.scale)
+    BULB_OF[light.name] = bulb
+
+
 def window_light(house, k):
     """Switch one house's windows: k = 1 lit (the mood's level), 0 dark, in between dimmed. house = an index into
     HOUSES or an (x, y) spot (the nearest house). Call it inside a shot; every frame starts with all windows lit."""
@@ -722,6 +743,8 @@ def time_of_day(mode):
         emission(MATS["cloud"], cloud)
     for li in LAMPS:
         li.energy = lamps
+    for o in BULB_OF.values():
+        o.scale = tuple(o["bt_size"])                # the bulb's own size (box() sizes by scale)
     for o in bpy.data.objects:
         if o.get("cloud"):
             o.hide_render = mode == "night"

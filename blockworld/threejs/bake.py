@@ -227,7 +227,8 @@ def record():
     S["sky"].append([round(x, 5) for x in (*r.elements[0].color[:3], *r.elements[1].color[:3],
                                            town.bg.inputs["Strength"].default_value)])
     S["emit"].append(emission_now())
-    S["lamp"].append(round(town.LAMPS[0].energy, 2) if town.LAMPS else 0.0)
+    es = [round(o.data.energy, 2) for o in S["lamps"]]                 # one value, or one per lamp when they differ
+    S["lamp"].append((es[0] if len(set(es)) == 1 else es) if es else 0.0)
     ov = sys.modules.get("overlay")                     # flat 2D graphics asked for this frame (blockworld/overlay.py)
     S["ov"].append(ov.flush(bpy.context.scene, town.cam) if ov else [])
     fx = sys.modules.get("fx")                          # effects and the colour grade (blockworld/fx.py)
