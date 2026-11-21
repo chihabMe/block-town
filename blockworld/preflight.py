@@ -5,6 +5,8 @@ and the episode's files, and says what to run for anything missing.
     python3 -I SKILL/blockworld/preflight.py EPISODE --final    also what the final render needs (music file, paid take)
 
 Exit code 1 if something needed is missing. Optional things (ElevenLabs, music) are listed but do not fail the check.
+A narration of 61 s or less is a warning before the final and a failure with --final (TikTok only pays for videos
+over one minute; docs/SCRIPT.md asks for 90-120 s).
 """
 import importlib.util, json, os, re, shutil, sys, wave
 from pathlib import Path
@@ -13,6 +15,7 @@ SKILL = Path(__file__).resolve().parent.parent
 BW = SKILL / "blockworld"
 HOME = Path.home()
 rows, failed = [], []
+MIN_LEN = 61.0                # seconds: Creator Rewards needs videos over one minute
 
 
 def row(ok, what, fix="", need=True):
@@ -93,6 +96,16 @@ def episode(ep, final):
         last = json.loads(times.read_text())[-1]["t1"]
         row(length + 0.05 >= last, f"narration covers the last word ({length:.1f} s vs {last:.1f} s)",
             "the voice file is older than times.json: run level_voice.py again")
+    if times.exists():
+        last = json.loads(times.read_text())[-1]["t1"]
+        if last <= MIN_LEN:
+            how = "lengthen the script (docs/SCRIPT.md: 90-120 s, never under 61 s), or say why it is short on purpose"
+        else:
+            how = ""
+        row(last > MIN_LEN, f"length over one minute ({last:.1f} s of narration; target 90-120 s)", how, need=final)
+        if MIN_LEN < last < 85:
+            rows.append(f"  --  {last:.0f} s is short for a story; docs/SCRIPT.md aims for 90-120 s (comedy 70-90 s)")
+    series(ep)
     if (ep / "pictures.json").exists():
         names = json.loads((ep / "pictures.json").read_text()).keys()
         missing = [n for n in names if not (ep / "pictures" / f"{n}.png").exists()]
@@ -130,6 +143,24 @@ def episode(ep, final):
             "the free Fish take is for tests; ask the user before paying for the posting take", need=False)
         row(int(conf.get("render_fps", 30)) > 30, f"finish.json render_fps {conf.get('render_fps', 30)}",
             'set "render_fps": 240, "blur": 4 for 60 fps with motion blur', need=False)
+
+
+def series(ep):
+    """A series part has series.json (docs/SCRIPT.md section 5): name, part, parts, bible."""
+    f = ep / "series.json"
+    if not f.exists():
+        return
+    try:
+        s = json.loads(f.read_text())
+    except ValueError as e:
+        row(False, f"series.json reads ({e})", "fix the JSON")
+        return
+    gone = [k for k in ("name", "part", "parts", "bible") if k not in s]
+    row(not gone, f"series.json: {s.get('name', '?')}, part {s.get('part', '?')} of {s.get('parts', '?')}",
+        "missing: " + ", ".join(gone))
+    if "bible" in s:
+        bible = (ep / s["bible"]).resolve()
+        row(bible.exists(), f"series bible {s['bible']}", "write it before the script (docs/SCRIPT.md section 5)")
 
 
 def main():

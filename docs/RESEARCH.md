@@ -53,12 +53,15 @@ Show **five ideas** by default (the user can ask for another number), as one tab
 | Why now | the pattern from gate 0 it rides on, with a number ("horror rules: 5 of the top 10 this month") |
 | Fresh | not on the taken list and not in `RULE_BANK.md`'s used rules |
 | Score | docs/SCRIPT.md's five tests, x/5 |
+| Series? | "single" or "2-3 parts", with one line on what Part 1 would end on (docs/SCRIPT.md section 5) |
 
 Rules for the ideas:
 - Ideas are new. Study other videos for craft (hook shape, pacing, form), never for their rule, joke, twist or
   script.
 - Use at least three moods across the five.
 - At least one idea uses a form that is winning right now (viewers choose, meta), if gate 0 found one.
+- At least one idea works as a series (a mystery or a monster with more to show). Series have been the channel's best
+  performers (Hush, Nov 2026).
 - Add all five to `RULE_BANK.md` (marked with the date), so ideas the user passed on stay for later.
 
 When the user picks one (by number, or "go with yours" = the recommended one), go on to gate 2.

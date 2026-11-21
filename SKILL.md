@@ -24,8 +24,8 @@ Read `docs/VIRAL_PACK.md` for cartoon moves, creatures, particle effects, game U
 Read before building: `docs/PLACES.md` (which place to load, its marks and its cameras), `docs/RESEARCH.md` (gate 0 research with Apify, gate 1's five ideas), `docs/WORLD_V2.md`
 (the dressed town, 24 faces, outfits, camera pack and post-processed picture, on by default), `docs/ROBLOX_LOOK.md` (the world, the cast, the props, how shots are made),
 `docs/RENDER.md` (the Three.js renderer, the life layer, tags, phone screens and printed props),
-`docs/SCRIPT.md` (how the story is written), `docs/VOICE.md` (voice and music), `docs/SOUND.md` (sound effects,
-ElevenLabs, the steady-voice mix). `docs/PROMPTS.md` has a prompt for each stage. `docs/GUIDE.md` is the original
+`docs/SCRIPT.md` (how the story is written, its length and series), `docs/VOICE.md` (voice and music), `docs/SOUND.md` (sound effects,
+ElevenLabs, the steady-voice mix), `docs/POSTING.md` (gate 9, the post kit). `docs/PROMPTS.md` has a prompt for each stage. `docs/GUIDE.md` is the original
 block-look manual: the map, `pose()`, the moves and camera rules still apply.
 
 ## How a video is made (since ep05)
@@ -100,6 +100,10 @@ so always write `style="roblox"` in a new episode.
   short-term loudness should stay within ±1 dB of -14 LUFS for the whole video.
 - **No stacked or harsh effects.** One sound per moment; nothing longer than the moment; no two "error" sounds within
   half a second.
+- **90-120 seconds, never under 61 s** (`docs/SCRIPT.md`): the niche's hits are long, and TikTok only pays for videos
+  over one minute. `preflight.py` warns before the final and fails at `--final`; `post_kit.py` checks the MP4.
+- **Series are welcome.** A mystery or monster idea can be 2-3 parts with a series bible (`docs/SCRIPT.md` section 5);
+  every part stands alone and points to the next.
 
 ## Make an episode: research, pick, draft, final
 
@@ -112,13 +116,14 @@ Stop after every gate, show the result, and wait for the user.
 |---|---|---|
 | 0 Research (optional) | Apify scrape of the niche (cost first, the user's yes), analysis, `TRENDS_<date>.md`: `docs/RESEARCH.md` | the findings, in ~10 lines |
 | 1 Ideas | **Five ideas** by default (the user may ask for more or fewer): rule, mood, two-line story, landmark, why now, score: `docs/RESEARCH.md` | a table + the recommended pick |
-| 2 Script | **Three full scripts** for the chosen idea, each a different angle (twist, tone or underdog), all scored on the critic list: `EPISODE/SCRIPT.md`; the pick goes to `EPISODE/script.txt` | the three scripts + the recommended pick |
+| 2 Script | **Three full scripts** for the chosen idea, each a different angle (twist, tone or underdog), all scored on the critic list: `EPISODE/SCRIPT.md`; the pick goes to `EPISODE/script.txt`. A series also gets `SERIES.md` (the bible), an outline of the later parts and `series.json` in each part folder | the three scripts + the recommended pick (+ the series outline) |
 | 3 Voice | `vo.py`, `words.py`, `voice_check.py` (free Fish take), `level_voice.py` | `vo/voice.wav`, its numbers |
 | 4 Designs | `EPISODE/design/episode.py`: one still of every new landmark, prop, costume and character; `EPISODE/pictures.json` and `pictures.py` for every phone screen and printed prop | `DESIGN_SHEET.jpg` + the screens |
 | 5 Stills | `EPISODE/episode.py` with every shot; `check` until `still_check.txt` is clean; stills; fix; `contact_sheet.py` | `CONTACT_SHEET.jpg` |
 | 6 Openings | `preflight.py`; **four opening variants** of the first ~15 s by default (the user may ask for fewer): `openings.py new`, each rendered as a draft, `openings.py grid` | the grid + each draft, recommended pick |
 | 7 Draft | the chosen opening moved into `episode.py`, then the **whole video as a fast draft**: `render_threejs.sh EPISODE --draft`, cues, `finish.py EPISODE --draft`; then review rounds (fix the notes, re-render only the changed shots) | `<name>_draft.mp4` each round |
 | 8 Final | on the user's approval only: `preflight.py --final`, the full-quality render (1080x1920, `render_fps` 240 + `blur` 4 = 60 fps with motion blur, the grade), `finish.py` (clean file + music file) | both MP4s |
+| 9 Post kit | `post.json` (caption, hashtags, pinned comment, AI label: `docs/POSTING.md`), then `post_kit.py`: checks, cover frames, `EPISODE/POST.md` with the caption, pinned comment, cover, series steps and the YouTube Shorts copy | `POST.md` + the cover candidates |
 
 Gate details are in `docs/PROMPTS.md` (prompt 1 runs the whole thing). Copy `examples/ep05-wifi` to start: it is a
 finished episode made this way, with its design sheet, 42 shots, phone pictures, cues and settings.
@@ -193,6 +198,10 @@ python3 -I SKILL/blockworld/cues.py EPISODE cues_spec.json   # cues by word ("sa
 # finishing
 python3 -I SKILL/blockworld/finish.py EPISODE --draft        # gates 6-7: frames_draft/ -> <name>_draft.mp4, fast encode
 python3 -I SKILL/blockworld/finish.py EPISODE                # gate 8: captions + voice + effects (+ music) -> the MP4s
+
+# posting (gate 9): docs/POSTING.md
+python3 -I SKILL/blockworld/post_kit.py EPISODE              # first run: a starter post.json; then checks + POST.md
+python3 -I SKILL/blockworld/post_kit.py EPISODE --video F.mp4  # a final with another file name
 ```
 
 - `check` renders nothing: it runs every shot, prints the shot table and warns about shots over 2.5 s.
@@ -244,6 +253,7 @@ python3 -I SKILL/blockworld/finish.py EPISODE                # gate 8: captions 
 | `blockworld/sfx_gen.py`, `sfx/ELEVENLABS_LIST.md` | ElevenLabs sound effects: the generator and the prompt list |
 | `blockworld/finish.py` | captions, voice, sound effects (looping beds too), music, the steady mix, the MP4s |
 | `blockworld/cues.py` | cue lists by word -> `cues.json` |
+| `blockworld/post_kit.py`, `docs/POSTING.md` | gate 9: caption, hashtags, pinned comment, cover frames, series posting steps -> `POST.md` |
 | `sfx/` | sound effects: the Pixabay set (`sfx/CREDITS.md`); ElevenLabs sounds land here as `el-*.mp3` / `epNN-*.mp3` once generated (none yet as of ep05) |
 | `examples/ep05-wifi` | the full worked episode (Roblox look, Three.js renderer) |
 | `examples/ep00-roblox-look`, `examples/ep01-intro` | short demos of the Roblox look and the block look |
